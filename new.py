@@ -190,31 +190,39 @@ print("Classification:", classifier.classify(test_features))
 
 
 
-# Simple Linear Regression Demonstration 
-import numpy as np 
-import matplotlib.pyplot as plt 
-from sklearn.linear_model import LinearRegression 
-# Dataset (Hours studied vs. Marks obtained) 
-X = np.array([1, 2, 3, 4, 5]).reshape(-1, 1)   # Independent variable 
-y = np.array([2, 4, 5, 4, 5])                  # Dependent variable 
-# Create model 
-model = LinearRegression() 
-model.fit(X, y) 
-# Predict values 
-y_pred = model.predict(X) 
-# Print slope and intercept 
-print("Slope (b):", model.coef_[0]) 
-print("Intercept (a):", model.intercept_) 
-# Test prediction 
-print("Predicted marks for 6 hours of study:", model.predict([[6]])[0]) 
-# Visualization 
-plt.scatter(X, y, color='blue', label='Actual Data') 
-plt.plot(X, y_pred, color='red', label='Regression Line') 
-plt.xlabel("Hours Studied") 
-plt.ylabel("Marks Obtained") 
-plt.title("Simple Linear Regression") 
-plt.legend() 
+# Simple Linear Regression Demonstration
+
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.linear_model import LinearRegression
+
+# Dataset (Hours studied vs. Marks obtained)
+X = np.array([1, 2, 3, 4, 5]).reshape(-1, 1)   # Independent variable
+y = np.array([2, 4, 5, 4, 5])                  # Dependent variable
+
+# Create and train the model
+model = LinearRegression()
+model.fit(X, y)
+
+# Predict values
+y_pred = model.predict(X)
+
+# Print slope and intercept
+print("Slope (b):", model.coef_[0])
+print("Intercept (a):", model.intercept_)
+
+# Test prediction
+print("Predicted marks for 6 hours of study:", model.predict([[6]])[0])
+
+# Visualization
+plt.scatter(X, y, color='blue', label='Actual Data')
+plt.plot(X, y_pred, color='red', label='Regression Line')
+plt.xlabel("Hours Studied")
+plt.ylabel("Marks Obtained")
+plt.title("Simple Linear Regression")
+plt.legend()
 plt.show()
+
 
 """
 
