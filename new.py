@@ -157,33 +157,39 @@ print("better (adjective) ->", lemmatizer.lemmatize("better", pos="a"))
 
 
 
-# Text Classification using NLTK 
-import nltk 
-from nltk.classify import NaiveBayesClassifier 
-# Training dataset (sentence, label) 
-training_data = [ 
-    ("I love this product", "Positive"), 
-    ("This is an amazing place", "Positive"), 
-    ("I feel great about the things", "Positive"), 
-    ("This is my best experience", "Positive"), 
-    ("I do not like this product", "Negative"), 
-    ("This is the worst thing ever", "Negative"), 
-    ("I feel bad about it", "Negative"), 
-    ("This is a terrible experience", "Negative") 
-] 
-# Feature extractor 
-def extract_features(words): 
-    return {word: True for word in words.split()} 
-# Prepare training set 
-training_features = [(extract_features(text), label) for (text, label) in 
-training_data] 
-# Train Naive Bayes Classifier 
-classifier = NaiveBayesClassifier.train(training_features) 
-# Test sentence 
-test_sentence = "I love this amazing product" 
-test_features = extract_features(test_sentence) 
-# Classification 
-print("Test Sentence:", test_sentence) 
+# Text Classification using NLTK
+
+import nltk
+from nltk.classify import NaiveBayesClassifier
+
+# Training dataset (sentence, label)
+training_data = [
+    ("I love this product", "Positive"),
+    ("This is an amazing place", "Positive"),
+    ("I feel great about the things", "Positive"),
+    ("This is my best experience", "Positive"),
+    ("I do not like this product", "Negative"),
+    ("This is the worst thing ever", "Negative"),
+    ("I feel bad about it", "Negative"),
+    ("This is a terrible experience", "Negative"),
+]
+
+# Feature extractor
+def extract_features(words):
+    return {word: True for word in words.split()}
+
+# Prepare training set
+training_features = [(extract_features(text), label) for (text, label) in training_data]
+
+# Train Naive Bayes Classifier
+classifier = NaiveBayesClassifier.train(training_features)
+
+# Test sentence
+test_sentence = "I love this amazing product"
+test_features = extract_features(test_sentence)
+
+# Classification
+print("Test Sentence:", test_sentence)
 print("Classification:", classifier.classify(test_features))
 
 
