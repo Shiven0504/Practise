@@ -136,24 +136,31 @@ print("\nPOS Tagging Result:")
 print(pos_tags)
 
 
-# Lemmatization using NLTK 
-import nltk 
-from nltk.stem import WordNetLemmatizer 
-from nltk.corpus import wordnet 
-# Download required datasets (only first time) 
-#nltk.download('wordnet') 
-#nltk.download('omw-1.4') 
-# Create WordNetLemmatizer object 
-lemmatizer = WordNetLemmatizer() 
-# Sample words 
-words = ["running", "flies", "better", "studies", "children", "feet"] 
-print("Original Word -> Lemmatized Word") 
-for word in words: 
-    print(f"{word} -> {lemmatizer.lemmatize(word)}") 
-# Lemmatization with Part of Speech (POS) 
-print("\nLemmatization with POS tags:") 
-print("running (verb) ->", lemmatizer.lemmatize("running", pos="v")) 
-print("better (adjective) ->", lemmatizer.lemmatize("better", pos="a")) 
+# Lemmatization using NLTK
+
+import nltk
+from nltk.stem import WordNetLemmatizer
+from nltk.corpus import wordnet
+
+# Download required datasets (only first time)
+# nltk.download('wordnet')
+# nltk.download('omw-1.4')
+
+# Create WordNetLemmatizer object
+lemmatizer = WordNetLemmatizer()
+
+# Sample words
+words = ["running", "flies", "better", "studies", "children", "feet"]
+
+print("Original Word -> Lemmatized Word")
+for word in words:
+    print(f"{word} -> {lemmatizer.lemmatize(word)}")
+
+# Lemmatization with Part of Speech (POS)
+print("\nLemmatization with POS tags:")
+print("running (verb) ->", lemmatizer.lemmatize("running", pos="v"))
+print("better (adjective) ->", lemmatizer.lemmatize("better", pos="a"))
+
 
 
 
