@@ -274,7 +274,7 @@ sample = [[5.1, 3.5, 1.4, 0.2]]  # Sepal length, Sepal width, Petal length, Peta
 prediction = knn.predict(sample) 
 print("Prediction for sample flower:", iris.target_names[prediction][0])
 
-"""
+
 
 
 
@@ -328,8 +328,81 @@ plt.title("Scatter Plot: Age vs Score")
 plt.show()
 
 
+# Data Structures Analysis in Python
 
+# 1. Lists
+numbers = [10, 20, 30, 40, 50]
+print("List:", numbers)
+print("Max:", max(numbers))
+print("Min:", min(numbers))
+print("Sum:", sum(numbers))
+print("Sorted:", sorted(numbers))
 
+# 2. Tuples
+coordinates = (5, 10)
+print("\nTuple:", coordinates)
+print("First element:", coordinates[0])
+
+# 3. Sets
+unique_numbers = {1, 2, 2, 3, 4, 5}
+print("\nSet (removes duplicates):", unique_numbers)
+print("Union:", unique_numbers.union({6, 7}))
+print("Intersection:", unique_numbers.intersection({2, 3, 8}))
+
+# 4. Dictionary
+student_scores = {"Alice": 85, "Bob": 90, "Charlie": 78}
+print("\nDictionary:", student_scores)
+print("Keys:", student_scores.keys())
+print("Values:", student_scores.values())
+print("Average Score:", sum(student_scores.values()) / len(student_scores))
+
+# 5. Using Pandas for advanced structure
+import pandas as pd
+
+data = {
+    "Name": ["Alice", "Bob", "Charlie"],
+    "Age": [25, 30, 22],
+    "Score": [85, 90, 78]
+}
+df = pd.DataFrame(data)
+print("\nPandas DataFrame:\n", df)
+print("\nSummary Statistics:\n", df.describe())
+
+"""
+
+import pandas as pd
+
+# Sample dataset
+data = {
+    "Name": ["Alice", "Bob", "Charlie", "David", "Eve", "Frank"],
+    "Department": ["HR", "IT", "IT", "Finance", "HR", "Finance"],
+    "Salary": [50000, 60000, 55000, 65000, 52000, 70000],
+    "Experience": [2, 5, 3, 7, 4, 10]
+}
+
+df = pd.DataFrame(data)
+print("Original DataFrame:\n", df)
+
+# 1. Aggregation on the whole dataset
+print("\nOverall Salary Stats:")
+print("Mean Salary:", df["Salary"].mean())
+print("Max Salary:", df["Salary"].max())
+print("Min Salary:", df["Salary"].min())
+
+# 2. GroupWise Aggregation
+grouped = df.groupby("Department")["Salary"].mean()
+print("\nAverage Salary by Department:\n", grouped)
+
+# 3. Multiple Aggregations per Group
+agg_results = df.groupby("Department").agg({
+    "Salary": ["mean", "max", "min"],
+    "Experience": "mean"
+})
+print("\nMultiple Aggregations by Department:\n", agg_results)
+
+# 4. Count of employees in each department
+count = df.groupby("Department")["Name"].count()
+print("\nEmployee Count by Department:\n", count)
 
 
 
