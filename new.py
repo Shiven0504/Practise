@@ -237,7 +237,7 @@ plt.legend()
 plt.show()
 
 
-"""
+
 
 # k-Nearest Neighbor Classification on Iris Dataset 
 from sklearn.datasets import load_iris 
@@ -273,6 +273,76 @@ print("Accuracy:", accuracy_score(y_test, y_pred))
 sample = [[5.1, 3.5, 1.4, 0.2]]  # Sepal length, Sepal width, Petal length, Petal width 
 prediction = knn.predict(sample) 
 print("Prediction for sample flower:", iris.target_names[prediction][0])
+
+"""
+
+
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Create a sample dataset
+data = {
+    "Name": ["Alice", "Bob", "Charlie", "David", "Eve", "Frank"],
+    "Age": [25, 30, 22, 28, 35, 27],
+    "Gender": ["F", "M", "M", "M", "F", "M"],
+    "Score": [85, 90, 78, 88, 92, 80]
+}
+
+df = pd.DataFrame(data)
+print("Data Frame:")
+print(df)
+
+# Descriptive Statistics
+print("\nSummary Statistics:")
+print(df.describe())    # mean, std, min, max for numeric columns
+
+print("\nMean Age:", df["Age"].mean())
+print("Correlation between Age and Score:", df["Age"].corr(df["Score"]))
+
+# Data Visualization
+
+# Bar Plot: Gender Count
+sns.countplot(x="Gender", data=df, palette="pastel")
+plt.title("Count of Each Gender")
+plt.show()
+
+# Histogram: Age Distribution
+sns.histplot(df["Age"], bins=5, kde=True, color="green")
+plt.title("Age Distribution")
+plt.xlabel("Age")
+plt.ylabel("Frequency")
+plt.show()
+
+# Boxplot: Score by Gender
+sns.boxplot(x="Gender", y="Score", data=df, palette="Set2")
+plt.title("Score Distribution by Gender")
+plt.show()
+
+# Scatter Plot: Age vs Score
+sns.scatterplot(x="Age", y="Score", hue="Gender", data=df, s=100, palette="deep")
+sns.regplot(x="Age", y="Score", data=df, scatter=False, color="red")
+plt.title("Scatter Plot: Age vs Score")
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -341,3 +411,7 @@ prediction = nb.predict(test_vector)
 
 print("Prediction for test sentence:", prediction[0])
 """
+
+
+
+
