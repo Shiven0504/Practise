@@ -50,9 +50,6 @@ plt.legend()
 plt.show()
 """
 
-# -------------------------------
-# ID3 Decision Tree Algorithm - Full Implementation
-# -------------------------------
 
 import pandas as pd
 import numpy as np
