@@ -373,7 +373,36 @@ print("\nSummary Statistics:\n", df.describe())
 
 import pandas as pd
 
-# Sample dataset
+def analyze_employee_data(df):
+    print("=== Original DataFrame ===")
+    print(df, "\n")
+
+    # 1. Overall Aggregation
+    print("=== Overall Salary Statistics ===")
+    print(df["Salary"].describe()[["mean", "max", "min"]], "\n")  # Cleaner summary
+
+    # 2. Group-wise Aggregation (Sorted by Average Salary)
+    print("=== Average Salary by Department (Sorted) ===")
+    avg_salary = df.groupby("Department")["Salary"].mean().sort_values(ascending=False)
+    print(avg_salary, "\n")
+
+    # 3. Multiple Aggregations per Group (Better formatting)
+    print("=== Aggregated Salary & Experience by Department ===")
+    agg_results = df.groupby("Department").agg(
+        Avg_Salary=("Salary", "mean"),
+        Max_Salary=("Salary", "max"),
+        Min_Salary=("Salary", "min"),
+        Avg_Experience=("Experience", "mean")
+    ).sort_values(by="Avg_Salary", ascending=False)
+    print(agg_results, "\n")
+
+    # 4. Employee Count per Department
+    print("=== Employee Count by Department ===")
+    print(df["Department"].value_counts(), "\n")
+
+    return avg_salary, agg_results
+
+# ---- Sample Dataset ----
 data = {
     "Name": ["Alice", "Bob", "Charlie", "David", "Eve", "Frank"],
     "Department": ["HR", "IT", "IT", "Finance", "HR", "Finance"],
@@ -382,33 +411,9 @@ data = {
 }
 
 df = pd.DataFrame(data)
-print("Original DataFrame:\n", df)
 
-# 1. Aggregation on the whole dataset
-print("\nOverall Salary Stats:")
-print("Mean Salary:", df["Salary"].mean())
-print("Max Salary:", df["Salary"].max())
-print("Min Salary:", df["Salary"].min())
-
-# 2. GroupWise Aggregation
-grouped = df.groupby("Department")["Salary"].mean()
-print("\nAverage Salary by Department:\n", grouped)
-
-# 3. Multiple Aggregations per Group
-agg_results = df.groupby("Department").agg({
-    "Salary": ["mean", "max", "min"],
-    "Experience": "mean"
-})
-print("\nMultiple Aggregations by Department:\n", agg_results)
-
-# 4. Count of employees in each department
-count = df.groupby("Department")["Name"].count()
-print("\nEmployee Count by Department:\n", count)
-
-
-
-
-
+# ---- Run Analysis ----
+avg_salary, agg_results = analyze_employee_data(df)
 
 
 
