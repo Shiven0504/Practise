@@ -1,3 +1,5 @@
+"""
+
 import numpy as np
 
 # Fuzzy Set Operations
@@ -73,4 +75,51 @@ print("\n--- Max-Min Composition ---")
 R_comp = maxmin_composition(R1, R2)
 print("R1 o R2:\n", R_comp)
 
+"""
+
+# Specific Rotation of Cane Sugar Solution using Half-Shade Polarimeter
+
+def specific_rotation(alpha, l_cm, weight_g, volume_ml):
+    """
+    Calculate specific rotation of cane sugar solution.
+
+    Parameters:
+    alpha    : observed rotation in degrees
+    l_cm     : length of polarimeter tube in cm
+    weight_g : weight of sugar dissolved (grams)
+    volume_ml: volume of solution prepared (mL)
+
+    Returns:
+    Specific rotation [α]
+    """
+    # Convert path length to dm
+    l_dm = l_cm / 10.0
+    
+    # Concentration (g per 100 mL)
+    p = (weight_g / volume_ml) * 100
+    
+    # Formula: [α] = 100 * α / (l * p)
+    specific_alpha = (100 * alpha) / (l_dm * p)
+    return specific_alpha
+
+
+
+# Example experiment calculation
+
+# Suppose:
+# - Observed rotation α = 13.2°
+# - Tube length = 20 cm
+# - Solution prepared: 2.0 g sucrose in 100 mL
+
+alpha_obs = 13.2      # degrees
+tube_length = 20.0    # cm
+weight = 2.0          # g
+volume = 100.0        # mL
+
+result = specific_rotation(alpha_obs, tube_length, weight, volume)
+
+print("Observed rotation (α):", alpha_obs, "degrees")
+print("Tube length (l):", tube_length, "cm")
+print("Concentration (p):", (weight/volume)*100, "g/100 mL")
+print("Specific rotation [α]: {:.2f} ° dm⁻¹ (g/100mL)⁻¹".format(result))
 
