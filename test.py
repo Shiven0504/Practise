@@ -43,7 +43,7 @@ plt.show()
 
 
 
-"""
+
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -96,3 +96,68 @@ plt.grid(True)
 
 plt.tight_layout()
 plt.show()
+
+"""
+
+
+from sklearn.neural_network import MLPClassifier
+import numpy as np
+
+# Example: AND function with Neural Network
+X = np.array([[0,0], [0,1], [1,0], [1,1]])
+y = np.array([0, 0, 0, 1])  # AND output
+
+# Simple neural network with 1 hidden layer of 2 neurons
+nn = MLPClassifier(hidden_layer_sizes=(2,), max_iter=1000, learning_rate_init=0.1)
+nn.fit(X, y)
+
+print("\n--- Neural Network Example ---")
+print("Predictions for AND gate:", nn.predict(X))
+
+
+# 2. Fuzzy Logic (using scikit-fuzzy)
+
+import skfuzzy as fuzz
+import numpy as np
+
+# Define fuzzy sets for 'temperature'
+x_temp = np.arange(0, 41, 1)  # 0 to 40°C
+cold = fuzz.trimf(x_temp, [0, 0, 20])
+warm = fuzz.trimf(x_temp, [10, 20, 30])
+hot  = fuzz.trimf(x_temp, [20, 40, 40])
+
+print("\n--- Fuzzy Logic Example ---")
+print("Membership degree of 15°C in 'cold':", fuzz.interp_membership(x_temp, cold, 15))
+print("Membership degree of 15°C in 'warm':", fuzz.interp_membership(x_temp, warm, 15))
+print("Membership degree of 15°C in 'hot' :", fuzz.interp_membership(x_temp, hot, 15))
+
+
+# 3. Genetic Algorithms (using DEAP)
+
+from deap import base, creator, tools, algorithms
+import random
+
+# Example: Maximize f(x) = x^2 for x in range(-10,10)
+creator.create("FitnessMax", base.Fitness, weights=(1.0,))
+creator.create("Individual", list, fitness=creator.FitnessMax)
+
+toolbox = base.Toolbox()
+toolbox.register("attr_int", random.randint, -10, 10)
+toolbox.register("individual", tools.initRepeat, creator.Individual, toolbox.attr_int, n=1)
+toolbox.register("population", tools.initRepeat, list, toolbox.individual)
+
+def eval_func(individual):
+    x = individual[0]
+    return x**2,
+
+toolbox.register("evaluate", eval_func)
+toolbox.register("mate", tools.cxUniform, indpb=0.5)
+toolbox.register("mutate", tools.mutUniformInt, low=-10, up=10, indpb=0.2)
+toolbox.register("select", tools.selTournament, tournsize=3)
+
+population = toolbox.population(n=10)
+algorithms.eaSimple(population, toolbox, cxpb=0.5, mutpb=0.2, ngen=10, verbose=False)
+
+best_ind = tools.selBest(population, k=1)[0]
+print("\n--- Genetic Algorithm Example ---")
+print(f"Best individual: {best_ind}, Fitness: {best_ind.fitness.values}")
