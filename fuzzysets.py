@@ -79,47 +79,71 @@ print("R1 o R2:\n", R_comp)
 
 # Specific Rotation of Cane Sugar Solution using Half-Shade Polarimeter
 
-def specific_rotation(alpha, l_cm, weight_g, volume_ml):
+def specific_rotation(alpha: float, l_cm: float, weight_g: float, volume_ml: float) -> float:
     """
-    Calculate specific rotation of cane sugar solution.
+    Calculate specific rotation [α] of a solution.
 
-    Parameters:
-    alpha    : observed rotation in degrees
-    l_cm     : length of polarimeter tube in cm
-    weight_g : weight of sugar dissolved (grams)
-    volume_ml: volume of solution prepared (mL)
+    Parameters
+    ----------
+    alpha : float
+        Observed rotation in degrees.
+    l_cm : float
+        Polarimeter tube length in centimeters.
+    weight_g : float
+        Mass of solute (grams) dissolved in the solution.
+    volume_ml : float
+        Volume of the prepared solution in millilitres.
 
-    Returns:
-    Specific rotation [α]
+    Returns
+    -------
+    float
+        Specific rotation [α] in degrees · dm⁻¹ · (g/100mL)⁻¹
+
+    Raises
+    ------
+    ValueError
+        If l_cm <= 0, volume_ml <= 0, or weight_g < 0.
     """
+    # Basic validation
+    if l_cm <= 0:
+        raise ValueError("Tube length (l_cm) must be > 0 cm")
+    if volume_ml <= 0:
+        raise ValueError("Volume (volume_ml) must be > 0 mL")
+    if weight_g < 0:
+        raise ValueError("Weight (weight_g) must be >= 0 g")
+
     # Convert path length to dm
     l_dm = l_cm / 10.0
-    
-    # Concentration (g per 100 mL)
-    p = (weight_g / volume_ml) * 100
-    
+
+    # Concentration in g per 100 mL
+    p = (weight_g / volume_ml) * 100.0
+
+    if p == 0:
+        # If no solute, specific rotation is undefined; return 0.0 for convenience
+        raise ValueError("Concentration is zero (no solute); specific rotation undefined")
+
     # Formula: [α] = 100 * α / (l * p)
-    specific_alpha = (100 * alpha) / (l_dm * p)
+    specific_alpha = (100.0 * alpha) / (l_dm * p)
     return specific_alpha
 
 
+if __name__ == "__main__":
+    # Example experiment calculation
+    # Observed rotation α = 13.2°
+    # Tube length = 20 cm
+    # Solution prepared: 2.0 g sucrose in 100 mL
+    alpha_obs = 13.2      # degrees
+    tube_length = 20.0    # cm
+    weight = 2.0          # g
+    volume = 100.0        # mL
 
-# Example experiment calculation
-
-# Suppose:
-# - Observed rotation α = 13.2°
-# - Tube length = 20 cm
-# - Solution prepared: 2.0 g sucrose in 100 mL
-
-alpha_obs = 13.2      # degrees
-tube_length = 20.0    # cm
-weight = 2.0          # g
-volume = 100.0        # mL
-
-result = specific_rotation(alpha_obs, tube_length, weight, volume)
-
-print("Observed rotation (α):", alpha_obs, "degrees")
-print("Tube length (l):", tube_length, "cm")
-print("Concentration (p):", (weight/volume)*100, "g/100 mL")
-print("Specific rotation [α]: {:.2f} ° dm⁻¹ (g/100mL)⁻¹".format(result))
-
+    try:
+        result = specific_rotation(alpha_obs, tube_length, weight, volume)
+    except ValueError as exc:
+        print("Error:", exc)
+    else:
+        conc = (weight / volume) * 100.0
+        print(f"Observed rotation (α): {alpha_obs} degrees")
+        print(f"Tube length (l): {tube_length} cm")
+        print(f"Concentration (p): {conc:.2f} g/100 mL")
+        print(f"Specific rotation [α]: {result:.4f} ° dm⁻¹ (g/100mL)⁻¹")
