@@ -117,47 +117,62 @@ print("Predictions for AND gate:", nn.predict(X))
 
 # 2. Fuzzy Logic (using scikit-fuzzy)
 
+from sklearn.neural_network import MLPClassifier
+from sklearn.metrics import accuracy_score
 import skfuzzy as fuzz
 import numpy as np
+import matplotlib.pyplot as plt
 
-# Define fuzzy sets for 'temperature'
-x_temp = np.arange(0, 41, 1)  # 0 to 40°C
+# --- 1) Neural network (AND) ---
+X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+y = np.array([0, 0, 0, 1])  # AND output
+
+# Deterministic MLP for reproducibility
+nn = MLPClassifier(hidden_layer_sizes=(2,), max_iter=1000, learning_rate_init=0.1, random_state=42, tol=1e-6)
+nn.fit(X, y)
+
+pred = nn.predict(X)
+acc = accuracy_score(y, pred)
+print("\n--- Neural Network Example ---")
+print("Predictions for AND gate:", pred)
+print(f"Training accuracy: {acc:.2f}")
+
+# show probabilities if available
+if hasattr(nn, "predict_proba"):
+    probs = nn.predict_proba(X)
+    print("Predicted probabilities:\n", np.round(probs, 3))
+else:
+    print("predict_proba not available for this estimator.")
+
+# --- 2) Fuzzy Logic (using scikit-fuzzy) ---
+# Define universe and membership functions for 'temperature' (0..40 °C)
+x_temp = np.arange(0, 41, 1)
 cold = fuzz.trimf(x_temp, [0, 0, 20])
 warm = fuzz.trimf(x_temp, [10, 20, 30])
 hot  = fuzz.trimf(x_temp, [20, 40, 40])
 
+# Evaluate memberships for several sample temperatures
+sample_temps = np.array([0, 5, 10, 15, 20, 25, 30, 35, 40])
+cold_m = np.array([fuzz.interp_membership(x_temp, cold, t) for t in sample_temps])
+warm_m = np.array([fuzz.interp_membership(x_temp, warm, t) for t in sample_temps])
+hot_m  = np.array([fuzz.interp_membership(x_temp, hot, t)  for t in sample_temps])
+
 print("\n--- Fuzzy Logic Example ---")
-print("Membership degree of 15°C in 'cold':", fuzz.interp_membership(x_temp, cold, 15))
-print("Membership degree of 15°C in 'warm':", fuzz.interp_membership(x_temp, warm, 15))
-print("Membership degree of 15°C in 'hot' :", fuzz.interp_membership(x_temp, hot, 15))
+print("Temp | cold  | warm  | hot")
+for t, c, w, h in zip(sample_temps, cold_m, warm_m, hot_m):
+    print(f"{t:4d} | {c:5.3f} | {w:5.3f} | {h:5.3f}")
 
-
-# 3. Genetic Algorithms (using DEAP)
-
-from deap import base, creator, tools, algorithms
-import random
-
-# Example: Maximize f(x) = x^2 for x in range(-10,10)
-creator.create("FitnessMax", base.Fitness, weights=(1.0,))
-creator.create("Individual", list, fitness=creator.FitnessMax)
-
-toolbox = base.Toolbox()
-toolbox.register("attr_int", random.randint, -10, 10)
-toolbox.register("individual", tools.initRepeat, creator.Individual, toolbox.attr_int, n=1)
-toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-
-def eval_func(individual):
-    x = individual[0]
-    return x**2,
-
-toolbox.register("evaluate", eval_func)
-toolbox.register("mate", tools.cxUniform, indpb=0.5)
-toolbox.register("mutate", tools.mutUniformInt, low=-10, up=10, indpb=0.2)
-toolbox.register("select", tools.selTournament, tournsize=3)
-
-population = toolbox.population(n=10)
-algorithms.eaSimple(population, toolbox, cxpb=0.5, mutpb=0.2, ngen=10, verbose=False)
-
-best_ind = tools.selBest(population, k=1)[0]
-print("\n--- Genetic Algorithm Example ---")
-print(f"Best individual: {best_ind}, Fitness: {best_ind.fitness.values}")
+# Optional: plot membership functions
+plt.figure(figsize=(6, 3.5))
+plt.plot(x_temp, cold, label="cold")
+plt.plot(x_temp, warm, label="warm")
+plt.plot(x_temp, hot, label="hot")
+plt.scatter(sample_temps, cold_m, c='C0', s=20)
+plt.scatter(sample_temps, warm_m, c='C1', s=20)
+plt.scatter(sample_temps, hot_m,  c='C2', s=20)
+plt.xlabel("Temperature (°C)")
+plt.ylabel("Membership degree")
+plt.title("Temperature fuzzy sets")
+plt.legend()
+plt.tight_layout()
+plt.show()
