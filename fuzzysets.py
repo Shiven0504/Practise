@@ -77,8 +77,7 @@ print("R1 o R2:\n", R_comp)
 
 """
 
-# Specific Rotation of Cane Sugar Solution using Half-Shade Polarimeter
-
+# ...existing code...
 def specific_rotation(alpha: float, l_cm: float, weight_g: float, volume_ml: float) -> float:
     """
     Calculate specific rotation [α] of a solution.
@@ -119,7 +118,6 @@ def specific_rotation(alpha: float, l_cm: float, weight_g: float, volume_ml: flo
     p = (weight_g / volume_ml) * 100.0
 
     if p == 0:
-        # If no solute, specific rotation is undefined; return 0.0 for convenience
         raise ValueError("Concentration is zero (no solute); specific rotation undefined")
 
     # Formula: [α] = 100 * α / (l * p)
@@ -128,22 +126,32 @@ def specific_rotation(alpha: float, l_cm: float, weight_g: float, volume_ml: flo
 
 
 if __name__ == "__main__":
-    # Example experiment calculation
-    # Observed rotation α = 13.2°
-    # Tube length = 20 cm
-    # Solution prepared: 2.0 g sucrose in 100 mL
-    alpha_obs = 13.2      # degrees
-    tube_length = 20.0    # cm
-    weight = 2.0          # g
-    volume = 100.0        # mL
+    # Improved CLI-driven example + nicer output formatting
+    import argparse
+    import sys
+
+    parser = argparse.ArgumentParser(
+        prog="specific_rotation",
+        description="Compute specific rotation [α] for a solution (° · dm⁻¹ · (g/100mL)⁻¹)."
+    )
+    parser.add_argument("--alpha", type=float, default=13.2, help="Observed rotation in degrees (default: 13.2)")
+    parser.add_argument("--length-cm", type=float, dest="l_cm", default=20.0, help="Tube length in cm (default: 20.0)")
+    parser.add_argument("--weight-g", type=float, dest="weight_g", default=2.0, help="Mass of solute in g (default: 2.0)")
+    parser.add_argument("--volume-ml", type=float, dest="volume_ml", default=100.0, help="Volume of solution in mL (default: 100.0)")
+    args = parser.parse_args()
 
     try:
-        result = specific_rotation(alpha_obs, tube_length, weight, volume)
+        result = specific_rotation(args.alpha, args.l_cm, args.weight_g, args.volume_ml)
     except ValueError as exc:
-        print("Error:", exc)
+        print("Error:", exc, file=sys.stderr)
+        sys.exit(1)
     else:
-        conc = (weight / volume) * 100.0
-        print(f"Observed rotation (α): {alpha_obs} degrees")
-        print(f"Tube length (l): {tube_length} cm")
-        print(f"Concentration (p): {conc:.2f} g/100 mL")
-        print(f"Specific rotation [α]: {result:.4f} ° dm⁻¹ (g/100mL)⁻¹")
+        conc = (args.weight_g / args.volume_ml) * 100.0
+        print("Specific Rotation Calculation")
+        print("-----------------------------")
+        print(f"Observed rotation (α): {args.alpha:.3f} °")
+        print(f"Tube length (l):      {args.l_cm:.2f} cm")
+        print(f"Mass of solute:       {args.weight_g:.3f} g")
+        print(f"Volume of solution:    {args.volume_ml:.2f} mL")
+        print(f"Concentration (p):    {conc:.3f} g/100mL")
+        print(f"\nSpecific Rotation [α]: {result:.6f} ° · dm⁻¹ · (g/100mL)⁻¹")
