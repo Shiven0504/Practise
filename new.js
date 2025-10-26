@@ -1,19 +1,25 @@
+// ...existing code...
 class StudentNode {
     constructor(data) {
         this.data = data;
         this.next = null;
     }
 }
-
+// ...existing code...
 class LinkedList {
     constructor() {
         this.head = null;
+        this._size = 0;
+    }
+
+    size() {
+        return this._size;
     }
 
     insertAt(position, data) {
         if (position < 0) {
             console.error("Invalid position");
-            return;
+            return false;
         }
 
         const newNode = new StudentNode(data);
@@ -21,7 +27,8 @@ class LinkedList {
         if (position === 0) {
             newNode.next = this.head;
             this.head = newNode;
-            return;
+            this._size++;
+            return true;
         }
 
         let prev = null;
@@ -36,19 +43,22 @@ class LinkedList {
 
         if (index !== position) {
             console.error("Position out of bounds");
-            return;
+            return false;
         }
 
         prev.next = newNode;
         newNode.next = current;
+        this._size++;
+        return true;
     }
 
     deleteByRollNo(rollNo) {
-        if (!this.head) return;
+        if (!this.head) return false;
 
         if (this.head.data.rollNo === rollNo) {
             this.head = this.head.next;
-            return;
+            this._size--;
+            return true;
         }
 
         let prev = null;
@@ -61,10 +71,12 @@ class LinkedList {
 
         if (!current) {
             console.warn("Roll number not found");
-            return;
+            return false;
         }
 
         prev.next = current.next;
+        this._size--;
+        return true;
     }
 
     reverse() {
@@ -79,6 +91,7 @@ class LinkedList {
         }
 
         this.head = prev;
+        return this;
     }
 
     toArray() {
@@ -91,27 +104,13 @@ class LinkedList {
         return out;
     }
 
-    print() {
-        const arr = this.toArray();
-        if (arr.length === 0) {
-            console.log("List is empty");
-            return;
+        print() {
+            const arr = this.toArray();
+            if (arr.length === 0) {
+                console.log("List is empty");
+                return;
+            }
+            console.log(`Student List (size=${this.size()}):`);
+            arr.forEach(s => console.log(`Roll No: ${s.rollNo}, Name: ${s.name}, Grade: ${s.grade}`));
         }
-        console.log("Student List:");
-        arr.forEach(s => console.log(`Roll No: ${s.rollNo}, Name: ${s.name}, Grade: ${s.grade}`));
     }
-}
-
-// Minimal usage example
-const list = new LinkedList();
-list.insertAt(0, { rollNo: 101, name: "Alice", grade: "A" });
-list.insertAt(1, { rollNo: 102, name: "Bob", grade: "B" });
-list.insertAt(2, { rollNo: 103, name: "Charlie", grade: "C" });
-
-list.print();
-list.reverse();
-list.print();
-
-list.deleteByRollNo(102);
-list.insertAt(1, { rollNo: 104, name: "Diana", grade: "B+" });
-list.print();
