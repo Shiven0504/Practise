@@ -1,4 +1,4 @@
-
+"""
 import numpy as np 
 import skfuzzy as fuzz 
 from skfuzzy import control as ctrl 
@@ -69,3 +69,70 @@ if __name__ == "__main__":
  
     plt.tight_layout() 
     plt.show()
+"""
+
+import random 
+import numpy as np 
+import matplotlib.pyplot as plt 
+from deap import base, creator, tools, algorithms 
+ 
+def total_distance(tour, dist_matrix): 
+    distance = 0 
+    for i in range(len(tour) - 1): 
+        distance += dist_matrix[tour[i]][tour[i + 1]] 
+    distance += dist_matrix[tour[-1]][tour[0]]  # Return to starting city 
+    return distance 
+ 
+num_cities = 10  # Number of cities 
+np.random.seed(1) 
+cities = np.random.rand(num_cities, 2) * 100 
+dist_matrix = np.linalg.norm(cities[:, np.newaxis] - cities[np.newaxis, :], axis=2) 
+ 
+creator.create("FitnessMin", base.Fitness, weights=(-1.0,)) 
+creator.create("Individual", list, fitness=creator.FitnessMin) 
+ 
+toolbox = base.Toolbox() 
+toolbox.register("indices", random.sample, range(num_cities), num_cities) 
+toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.indices) 
+toolbox.register("population", tools.initRepeat, list, toolbox.individual) 
+ 
+def evaluate(individual): 
+    return (total_distance(individual, dist_matrix),) 
+ 
+toolbox.register("evaluate", evaluate) 
+toolbox.register("mate", tools.cxOrdered) 
+toolbox.register("mutate", tools.mutShuffleIndexes, indpb=0.05) 
+toolbox.register("select", tools.selTournament, tournsize=3) 
+ 
+print("Starting Genetic Algorithm for TSP...\n") 
+ 
+population = toolbox.population(n=100) 
+NGEN = 20    
+CXPB, MUTPB = 0.7, 0.2 
+ 
+stats = tools.Statistics(lambda ind: ind.fitness.values) 
+stats.register("avg", np.mean) 
+stats.register("min", np.min) 
+stats.register("max", np.max) 
+ 
+pop, log = algorithms.eaSimple(population, toolbox, cxpb=CXPB, mutpb=MUTPB, 
+                               ngen=NGEN, stats=stats, verbose=True) 
+ 
+best_ind = tools.selBest(population, 1)[0] 
+min_dist = total_distance(best_ind, dist_matrix) 
+ 
+print("\n--- GA Finished ---") 
+print("Best tour found:") 
+print(best_ind) 
+print(f"Minimum tour distance: {min_dist:.2f}") 
+ 
+plt.figure(figsize=(7, 6)) 
+plt.scatter(cities[:, 0], cities[:, 1], c='blue', s=50, label="Cities") 
+tour_coords = cities[best_ind + [best_ind[0]]]  # Return to start 
+plt.plot(tour_coords[:, 0], tour_coords[:, 1], 'r-', linewidth=1.5, label="Best Path") 
+plt.title(f"Best Tour Found (Distance: {min_dist:.2f})") 
+plt.xlabel("X Coordinate") 
+plt.ylabel("Y Coordinate") 
+plt.legend() 
+plt.grid(True) 
+plt.show()
