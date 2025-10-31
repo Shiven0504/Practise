@@ -110,23 +110,50 @@ def fuzzy_temperature_demo(sample_temps=None, plot=True, save_plot=False, out_pa
     Demonstrate temperature fuzzy sets (cold, warm, hot), print a table of memberships
     for sample temperatures and optionally plot the membership functions.
     """
+    # Provide minimal local implementations of triangular membership and interpolation
+    # so the demo runs even if scikit-fuzzy is not installed (and to avoid import errors in editors).
+    def _trimf(x, abc):
+        a, b, c = abc
+        x = np.asarray(x, dtype=float)
+        y = np.zeros_like(x, dtype=float)
+        # rising edge a..b
+        if b != a:
+            idx = (x >= a) & (x <= b)
+            y[idx] = (x[idx] - a) / (b - a)
+        else:
+            y[x == a] = 1.0
+        # falling edge b..c
+        if c != b:
+            idx = (x >= b) & (x <= c)
+            y[idx] = (c - x[idx]) / (c - b)
+        else:
+            y[x == c] = 1.0
+        return np.clip(y, 0.0, 1.0)
+
+    def _interp_membership(x, mf, value):
+        # linear interpolation to evaluate membership at a scalar value
+        return float(np.interp(value, x, mf))
+
+    # Try to use scikit-fuzzy if available, otherwise fall back to local functions.
     try:
-        import skfuzzy as fuzz
-    except Exception as e:
-        print("skfuzzy is not available; fuzzy demo will be skipped. Install with `pip install scikit-fuzzy`.")
-        return
+        import skfuzzy as fuzz  # type: ignore
+        trimf = fuzz.trimf
+        interp_membership = fuzz.interp_membership
+    except Exception:
+        trimf = _trimf
+        interp_membership = _interp_membership
 
     x_temp = np.arange(0, 41, 1)                 # universe: 0..40 °C
-    cold = fuzz.trimf(x_temp, [0, 0, 20])
-    warm = fuzz.trimf(x_temp, [10, 20, 30])
-    hot  = fuzz.trimf(x_temp, [20, 40, 40])
+    cold = trimf(x_temp, [0, 0, 20])
+    warm = trimf(x_temp, [10, 20, 30])
+    hot  = trimf(x_temp, [20, 40, 40])
 
     if sample_temps is None:
         sample_temps = np.array([0, 5, 10, 15, 20, 25, 30, 35, 40])
 
-    cold_m = np.array([fuzz.interp_membership(x_temp, cold, t) for t in sample_temps])
-    warm_m = np.array([fuzz.interp_membership(x_temp, warm, t) for t in sample_temps])
-    hot_m  = np.array([fuzz.interp_membership(x_temp, hot, t)  for t in sample_temps])
+    cold_m = np.array([interp_membership(x_temp, cold, t) for t in sample_temps])
+    warm_m = np.array([interp_membership(x_temp, warm, t) for t in sample_temps])
+    hot_m  = np.array([interp_membership(x_temp, hot, t)  for t in sample_temps])
 
     # Print a tidy table
     print("\n--- Fuzzy Logic Example (Temperature) ---")
