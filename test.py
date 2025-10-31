@@ -99,32 +99,22 @@ plt.show()
 
 """
 
+import numpy as np
+import matplotlib.pyplot as plt
 
 from sklearn.neural_network import MLPClassifier
-import numpy as np
-
-# Example: AND function with Neural Network
-X = np.array([[0,0], [0,1], [1,0], [1,1]])
-y = np.array([0, 0, 0, 1])  # AND output
-
-# Simple neural network with 1 hidden layer of 2 neurons
-nn = MLPClassifier(hidden_layer_sizes=(2,), max_iter=1000, learning_rate_init=0.1)
-nn.fit(X, y)
-
-print("\n--- Neural Network Example ---")
-print("Predictions for AND gate:", nn.predict(X))
 
 
-
-# --- 2) Fuzzy Logic (using scikit-fuzzy) ---
 def fuzzy_temperature_demo(sample_temps=None, plot=True, save_plot=False, out_path="temperature_fuzzy_sets.png"):
     """
     Demonstrate temperature fuzzy sets (cold, warm, hot), print a table of memberships
     for sample temperatures and optionally plot the membership functions.
     """
-    import skfuzzy as fuzz
-    import numpy as np
-    import matplotlib.pyplot as plt
+    try:
+        import skfuzzy as fuzz
+    except Exception as e:
+        print("skfuzzy is not available; fuzzy demo will be skipped. Install with `pip install scikit-fuzzy`.")
+        return
 
     x_temp = np.arange(0, 41, 1)                 # universe: 0..40 °C
     cold = fuzz.trimf(x_temp, [0, 0, 20])
@@ -150,9 +140,9 @@ def fuzzy_temperature_demo(sample_temps=None, plot=True, save_plot=False, out_pa
         plt.plot(x_temp, cold, label="cold", lw=2)
         plt.plot(x_temp, warm, label="warm", lw=2)
         plt.plot(x_temp, hot,  label="hot",  lw=2)
-        plt.scatter(sample_temps, cold_m, c='C0', s=25, label=None, zorder=5)
-        plt.scatter(sample_temps, warm_m, c='C1', s=25, label=None, zorder=5)
-        plt.scatter(sample_temps, hot_m,  c='C2', s=25, label=None, zorder=5)
+        plt.scatter(sample_temps, cold_m, c='C0', s=25, zorder=5)
+        plt.scatter(sample_temps, warm_m, c='C1', s=25, zorder=5)
+        plt.scatter(sample_temps, hot_m,  c='C2', s=25, zorder=5)
         plt.xlabel("Temperature (°C)")
         plt.ylabel("Membership degree")
         plt.title("Temperature fuzzy sets")
@@ -164,5 +154,26 @@ def fuzzy_temperature_demo(sample_temps=None, plot=True, save_plot=False, out_pa
             print(f"Saved plot to: {out_path}")
         plt.show()
 
-# Call demo with defaults
-fuzzy_temperature_demo()
+
+def run_nn_and_fuzzy():
+    # Example: AND function with Neural Network
+    X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+    y = np.array([0, 0, 0, 1])  # AND output
+
+    # Use a deterministic solver for this tiny dataset and set random_state for reproducibility
+    nn = MLPClassifier(hidden_layer_sizes=(2,), max_iter=1000, learning_rate_init=0.1,
+                       solver='lbfgs', random_state=1)
+    nn.fit(X, y)
+
+    preds = nn.predict(X)
+    print("\n--- Neural Network Example ---")
+    print("Predictions for AND gate:", preds)
+    print("Expected:", y)
+    print("Accuracy:", (preds == y).mean())
+
+    # Run fuzzy demo (skfuzzy optional)
+    fuzzy_temperature_demo()
+
+
+if __name__ == "__main__":
+    run_nn_and_fuzzy()
