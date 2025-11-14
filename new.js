@@ -52,10 +52,25 @@ class LinkedList {
         return true;
     }
 
+    insertEnd(data) {
+        return this.insertAt(this._size, data);
+    }
+
+    findByRollNo(rollNo) {
+        let cur = this.head;
+        let index = 0;
+        while (cur) {
+            if (cur.data && cur.data.rollNo === rollNo) return { node: cur, index };
+            cur = cur.next;
+            index++;
+        }
+        return { node: null, index: -1 };
+    }
+
     deleteByRollNo(rollNo) {
         if (!this.head) return false;
 
-        if (this.head.data.rollNo === rollNo) {
+        if (this.head.data && this.head.data.rollNo === rollNo) {
             this.head = this.head.next;
             this._size--;
             return true;
@@ -64,7 +79,7 @@ class LinkedList {
         let prev = null;
         let current = this.head;
 
-        while (current && current.data.rollNo !== rollNo) {
+        while (current && (!current.data || current.data.rollNo !== rollNo)) {
             prev = current;
             current = current.next;
         }
@@ -77,6 +92,11 @@ class LinkedList {
         prev.next = current.next;
         this._size--;
         return true;
+    }
+
+    clear() {
+        this.head = null;
+        this._size = 0;
     }
 
     reverse() {
@@ -104,13 +124,19 @@ class LinkedList {
         return out;
     }
 
-        print() {
-            const arr = this.toArray();
-            if (arr.length === 0) {
-                console.log("List is empty");
-                return;
-            }
-            console.log(`Student List (size=${this.size()}):`);
-            arr.forEach(s => console.log(`Roll No: ${s.rollNo}, Name: ${s.name}, Grade: ${s.grade}`));
+    forEach(fn) {
+        let cur = this.head;
+        let idx = 0;
+        while (cur) {
+            fn(cur.data, idx);
+            cur = cur.next;
+            idx++;
         }
     }
+
+    toString() {
+        return this.toArray()
+            .map(s => `Roll No: ${s.rollNo}, Name: ${s.name}, Grade: ${s.grade}`)
+            .join('\n');
+    }
+}
