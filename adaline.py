@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from typing import Tuple, List, Optional
 
 """
 ADALINE training for AND function (batch updates).
@@ -9,7 +10,15 @@ ADALINE training for AND function (batch updates).
 - Prints linear outputs and discrete predictions (threshold 0.5).
 """
 
-def train_adaline(X, d, learning_rate=0.1, max_epochs=1000, tolerance=1e-6, seed=None, verbose=False):
+def train_adaline(
+    X: np.ndarray,
+    d: np.ndarray,
+    learning_rate: float = 0.1,
+    max_epochs: int = 1000,
+    tolerance: float = 1e-6,
+    seed: Optional[int] = None,
+    verbose: bool = False
+) -> Tuple[np.ndarray, List[float], int]:
     """Train ADALINE using batch LMS. Returns (weights, mse_history, epoch_reached)."""
     if seed is not None:
         np.random.seed(seed)
@@ -22,7 +31,7 @@ def train_adaline(X, d, learning_rate=0.1, max_epochs=1000, tolerance=1e-6, seed
 
     prev_mse = np.inf
     n_samples = X_bias.shape[0]
-    mse_history = []
+    mse_history: List[float] = []
 
     for epoch in range(1, max_epochs + 1):
         outputs = X_bias.dot(weights)          # shape (n_samples,)
@@ -32,10 +41,10 @@ def train_adaline(X, d, learning_rate=0.1, max_epochs=1000, tolerance=1e-6, seed
         weight_update = learning_rate * (X_bias.T.dot(errors)) / n_samples
         weights += weight_update
 
-        mse = np.mean(errors ** 2)
+        mse = float(np.mean(errors ** 2))
         mse_history.append(mse)
 
-        if verbose and epoch % 100 == 0:
+        if verbose and (epoch % 100 == 0 or epoch == 1):
             print(f"Epoch {epoch:4d} MSE: {mse:.6e}")
 
         # Check for convergence (based on MSE change)
@@ -51,11 +60,11 @@ def train_adaline(X, d, learning_rate=0.1, max_epochs=1000, tolerance=1e-6, seed
     return weights, mse_history, max_epochs
 
 
-def predict_adaline(weights, X):
-    """Return linear outputs and binary predictions (threshold 0.5) for inputs X."""
+def predict_adaline(weights: np.ndarray, X: np.ndarray, threshold: float = 0.5) -> Tuple[np.ndarray, np.ndarray]:
+    """Return linear outputs and binary predictions (threshold default 0.5) for inputs X."""
     X_bias = np.hstack((np.ones((X.shape[0], 1)), X))
     linear_outputs = X_bias.dot(weights)
-    predictions = (linear_outputs >= 0.5).astype(int)
+    predictions = (linear_outputs >= threshold).astype(int)
     return linear_outputs, predictions
 
 
@@ -74,25 +83,31 @@ if __name__ == "__main__":
     d = np.array([0, 0, 0, 1])
 
     # Train
-    weights, mse_history, epoch_reached = train_adaline(X, d, learning_rate=0.1,
-                                                       max_epochs=1000, tolerance=1e-6,
-                                                       seed=42, verbose=True)
+    weights, mse_history, epoch_reached = train_adaline(
+        X, d,
+        learning_rate=0.1,
+        max_epochs=1000,
+        tolerance=1e-6,
+        seed=42,
+        verbose=True
+    )
 
     print("\nFinal weights (including bias):")
     print(weights)
 
     # Test the trained ADALINE (linear outputs and discrete predictions)
-    linear_outputs, preds = predict_adaline(weights, X)
+    linear_outputs, preds = predict_adaline(weights, X, threshold=0.5)
     print("\nTesting on inputs:")
     for xi, target, lin, p in zip(X, d, linear_outputs, preds):
         print(f"Input: {xi}, Target: {target}, Linear: {lin:.4f}, Predicted: {p}")
 
-    # Optional: plot MSE history
+    # Optional: plot MSE history and save
     plt.figure(figsize=(6,3))
     plt.plot(mse_history, lw=1.5)
     plt.xlabel("Epoch")
     plt.ylabel("MSE")
-    plt.title("ADALINE training MSE")
+    plt.title(f"ADALINE training MSE (epochs={epoch_reached})")
     plt.grid(alpha=0.25)
     plt.tight_layout()
+    # uncomment to save: plt.savefig("adaline_mse.png", dpi=150)
     plt.show()
