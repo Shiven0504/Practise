@@ -1,11 +1,11 @@
-// ...existing code...
+
 class StudentNode {
     constructor(data) {
         this.data = data;
         this.next = null;
     }
 }
-// ...existing code...
+
 class LinkedList {
     constructor() {
         this.head = null;
