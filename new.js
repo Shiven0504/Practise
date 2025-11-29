@@ -1,4 +1,3 @@
-
 class StudentNode {
     constructor(data) {
         this.data = data;
@@ -23,6 +22,12 @@ class LinkedList {
     insertAt(position, data) {
         if (position < 0) {
             console.error("Invalid position");
+            return false;
+        }
+
+        // quick bounds check
+        if (position > this._size) {
+            console.error("Position out of bounds");
             return false;
         }
 
@@ -190,7 +195,13 @@ class LinkedList {
 
     toString() {
         return this.toArray()
-            .map(s => `Roll No: ${s.rollNo}, Name: ${s.name}, Grade: ${s.grade}`)
+            .map(s => {
+                if (!s) return 'Invalid student';
+                const rn = s.rollNo ?? 'N/A';
+                const name = s.name ?? 'N/A';
+                const grade = s.grade ?? 'N/A';
+                return `Roll No: ${rn}, Name: ${name}, Grade: ${grade}`;
+            })
             .join('\n');
     }
 
@@ -201,7 +212,15 @@ class LinkedList {
             return;
         }
         console.log(`Student List (size=${this.size()}):`);
-        arr.forEach(s => console.log(`Roll No: ${s.rollNo}, Name: ${s.name}, Grade: ${s.grade}`));
+        arr.forEach(s => {
+            if (!s) {
+                console.log("Invalid student");
+                return;
+            }
+            const rn = s.rollNo ?? 'N/A';
+            const name = s.name ?? 'N/A';
+            const grade = s.grade ?? 'N/A';
+            console.log(`Roll No: ${rn}, Name: ${name}, Grade: ${grade}`);
+        });
     }
 }
-    //
