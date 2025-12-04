@@ -381,7 +381,7 @@ print("\nSummary Statistics:\n", df.describe())
 
 
 
-
+"""
 # Naïve Bayes Classifier Demonstration
 
 from sklearn.model_selection import train_test_split
@@ -443,7 +443,7 @@ test_vector = vectorizer.transform(test_sentence)
 prediction = nb.predict(test_vector)
 
 print("Prediction for test sentence:", prediction[0])
-
+"""
 
 
 
