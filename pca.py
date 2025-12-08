@@ -51,70 +51,101 @@ plt.show()
 """
 
 
+# ...existing code...
 import pandas as pd
 import numpy as np
 from math import log2
+from typing import Dict, Any, List, Optional
 
 # Step 1: Entropy Function
-def entropy(target_col):
+def entropy(target_col: pd.Series) -> float:
     values, counts = np.unique(target_col, return_counts=True)
-    entropy_val = -sum((counts[i]/sum(counts)) * log2(counts[i]/sum(counts)) for i in range(len(values)))
-    return entropy_val
+    probs = counts / counts.sum()
+    # avoid log2(0) by filtering zero probabilities
+    probs = probs[probs > 0]
+    return -float(np.sum(probs * np.log2(probs)))
 
 # Step 2: Information Gain
-def info_gain(data, split_attribute, target_name="Play"):
+def info_gain(data: pd.DataFrame, split_attribute: str, target_name: str = "Play") -> float:
     total_entropy = entropy(data[target_name])
     values, counts = np.unique(data[split_attribute], return_counts=True)
-    
-    weighted_entropy = sum((counts[i]/sum(counts)) * entropy(data[data[split_attribute] == values[i]][target_name]) 
-                           for i in range(len(values)))
-    
+    total_count = len(data)
+    weighted_entropy = 0.0
+    for v, c in zip(values, counts):
+        subset = data[data[split_attribute] == v]
+        weighted_entropy += (c / total_count) * entropy(subset[target_name])
     return total_entropy - weighted_entropy
 
 # Step 3: ID3 Algorithm
-def id3(data, original_data, features, target_name="Play", parent_node_class=None):
-    if len(np.unique(data[target_name])) == 1:  # Pure node
-        return np.unique(data[target_name])[0]
-    
-    if len(data) == 0:  # No samples
-        return np.unique(original_data[target_name])[np.argmax(
-            np.unique(original_data[target_name], return_counts=True)[1])]
-    
-    if len(features) == 0:  # No features left
+def id3(data: pd.DataFrame,
+        original_data: pd.DataFrame,
+        features: List[str],
+        target_name: str = "Play",
+        parent_node_class: Optional[Any] = None) -> Any:
+    # If all target values are the same, return that value
+    unique_targets = np.unique(data[target_name])
+    if len(unique_targets) == 1:
+        return unique_targets[0]
+
+    # If dataset is empty, return the most common target in the original dataset
+    if data.shape[0] == 0:
+        return original_data[target_name].value_counts().idxmax()
+
+    # If no features left, return the parent node class (majority class)
+    if len(features) == 0:
         return parent_node_class
-    
-    parent_node_class = np.unique(data[target_name])[np.argmax(
-        np.unique(data[target_name], return_counts=True)[1])]
-    
+
+    # Set parent node class to the majority class of current node
+    parent_node_class = data[target_name].value_counts().idxmax()
+
+    # Compute information gain for each feature and select the best
     gains = [info_gain(data, feature, target_name) for feature in features]
-    best_feature = features[np.argmax(gains)]
-    
-    tree = {best_feature: {}}
-    
+    best_feature = features[int(np.argmax(gains))]
+
+    tree: Dict[str, Any] = {best_feature: {}}
+
+    # For each possible value of the best feature, grow subtree
     for value in np.unique(data[best_feature]):
         sub_data = data[data[best_feature] == value]
-        new_features = [f for f in features if f != best_feature]
-        
-        subtree = id3(sub_data, original_data, new_features, target_name, parent_node_class)
+        remaining_features = [f for f in features if f != best_feature]
+        subtree = id3(sub_data, original_data, remaining_features, target_name, parent_node_class)
         tree[best_feature][value] = subtree
-    
+
     return tree
 
+# Utility: pretty-print the tree
+def print_tree(tree: Any, indent: str = "") -> None:
+    if not isinstance(tree, dict):
+        print(indent + str(tree))
+        return
+    for feature, branches in tree.items():
+        for value, subtree in branches.items():
+            print(f"{indent}{feature} = {value} ->", end=" ")
+            if isinstance(subtree, dict):
+                print()
+                print_tree(subtree, indent + "    ")
+            else:
+                print(subtree)
+
 # Step 4: Sample Dataset (Weather Data)
-data = {
-    'Outlook': ['Sunny','Sunny','Overcast','Rain','Rain','Rain','Overcast','Sunny','Sunny','Rain','Sunny','Overcast','Overcast','Rain'],
-    'Temperature': ['Hot','Hot','Hot','Mild','Cool','Cool','Cool','Mild','Cool','Mild','Mild','Mild','Hot','Mild'],
-    'Humidity': ['High','High','High','High','Normal','Normal','Normal','High','Normal','Normal','Normal','High','Normal','High'],
-    'Wind': ['Weak','Strong','Weak','Weak','Weak','Strong','Strong','Weak','Weak','Weak','Strong','Strong','Weak','Strong'],
-    'Play': ['No','No','Yes','Yes','Yes','No','Yes','No','Yes','Yes','Yes','Yes','Yes','No']
-}
+def main():
+    data = {
+        'Outlook': ['Sunny','Sunny','Overcast','Rain','Rain','Rain','Overcast','Sunny','Sunny','Rain','Sunny','Overcast','Overcast','Rain'],
+        'Temperature': ['Hot','Hot','Hot','Mild','Cool','Cool','Cool','Mild','Cool','Mild','Mild','Mild','Hot','Mild'],
+        'Humidity': ['High','High','High','High','Normal','Normal','Normal','High','Normal','Normal','Normal','High','Normal','High'],
+        'Wind': ['Weak','Strong','Weak','Weak','Weak','Strong','Strong','Weak','Weak','Weak','Strong','Strong','Weak','Strong'],
+        'Play': ['No','No','Yes','Yes','Yes','No','Yes','No','Yes','Yes','Yes','Yes','Yes','No']
+    }
 
-df = pd.DataFrame(data)
+    df = pd.DataFrame(data)
 
-# Step 5: Train ID3 Tree
-features = ['Outlook', 'Temperature', 'Humidity', 'Wind']
-tree = id3(df, df, features)
+    # Step 5: Train ID3 Tree
+    features = ['Outlook', 'Temperature', 'Humidity', 'Wind']
+    tree = id3(df, df, features)
 
-# Output the tree
-print("Generated Decision Tree (ID3):")
-print(tree)
+    # Output the tree
+    print("Generated Decision Tree (ID3):")
+    print_tree(tree)
+
+if __name__ == "__main__":
+    main()
