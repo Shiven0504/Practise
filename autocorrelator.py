@@ -111,5 +111,5 @@ if __name__ == "__main__":
         for mode in ("synchronous", "asynchronous"):
             final, steps, converged = recall(pattern, W, max_steps=20, mode=mode, rng=rng)
             match_name, idx = match_stored(final, stored_patterns, pattern_names)
-            print(f"  [{mode:11s}] Output after {steps} step(s): {final}  Converged: {converged}  Match: {match_name}")
-            print(f"              Energy (output): {energy(final, W)}")
+            print(f"[{mode:11s}] Output after {steps} step(s): {final}  Converged: {converged}  Match: {match_name}")
+            print(f"Energy (output): {energy(final, W)}")
