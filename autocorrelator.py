@@ -10,28 +10,17 @@ pattern_names = ["A1", "A2", "A3"]
 
 def build_weight_matrix(patterns: List[np.ndarray]) -> np.ndarray:
     """Builds a Hopfield-style weight matrix from bipolar patterns (zero diagonal)."""
-    if not patterns:
-        raise ValueError("patterns must be a non-empty list of numpy arrays")
-    # ensure all patterns are 1-D and same length
-    arrays = [np.asarray(p).ravel() for p in patterns]
-    n = arrays[0].size
-    for p in arrays:
-        if p.size != n:
-            raise ValueError("all patterns must have the same size")
+    n = patterns[0].size
     W = np.zeros((n, n), dtype=float)
-    for p in arrays:
+    for p in patterns:
         W += np.outer(p, p)
-    np.fill_diagonal(W, 0.0)
+    np.fill_diagonal(W, 0)
     return W
 
 
-def activation(x):
-    """Bipolar step activation function. Accepts scalar or array; returns same-shape ints."""
-    xa = np.asarray(x)
-    out = np.where(xa >= 0, 1, -1).astype(int)
-    if out.shape == ():
-        return int(out.item())
-    return out
+def activation(x: np.ndarray) -> np.ndarray:
+    """Bipolar step activation function."""
+    return np.where(x >= 0, 1, -1)
 
 
 def energy(state: np.ndarray, W: np.ndarray) -> float:
@@ -52,14 +41,12 @@ def recall(pattern: np.ndarray,
     if rng is None:
         rng = np.random.default_rng()
 
-    state = np.asarray(pattern).copy()
+    state = pattern.copy()
     n = state.size
 
     if mode == "synchronous":
         for step in range(1, max_steps + 1):
-            net = W @ state               # net input for all neurons
-            new_state = activation_fn(net)
-            new_state = np.asarray(new_state).astype(int)
+            new_state = activation_fn(np.dot(state, W))
             if np.array_equal(new_state, state):
                 return new_state, step, True
             state = new_state
@@ -71,9 +58,7 @@ def recall(pattern: np.ndarray,
             # random order asynchronous updates (one full pass = one step)
             for i in rng.permutation(n):
                 net = W[i, :] @ state
-                val = activation_fn(net)
-                # ensure scalar int
-                state[i] = int(np.asarray(val).item())
+                state[i] = activation_fn(np.array([net]))[0]
             if np.array_equal(state, prev):
                 return state, step, True
         return state, max_steps, False
@@ -86,14 +71,14 @@ def match_stored(state: np.ndarray, stored: List[np.ndarray], names: Optional[Li
     """Return (name, index) of matching stored pattern or (None, -1)."""
     for i, p in enumerate(stored):
         if np.array_equal(state, p):
-            return (names[i] if names else None, i)
+            return (names[i] if names else i, i)
     return (None, -1)
 
 
 def flip_bits(pattern: np.ndarray, n_bits: int = 1, seed: Optional[int] = None) -> np.ndarray:
     """Return a copy of pattern with n_bits randomly flipped (bipolar)."""
     rng = np.random.default_rng(seed)
-    out = np.asarray(pattern).copy()
+    out = pattern.copy()
     idx = rng.choice(pattern.size, size=min(n_bits, pattern.size), replace=False)
     out[idx] = -out[idx]
     return out
