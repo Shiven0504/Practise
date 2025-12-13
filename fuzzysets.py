@@ -78,52 +78,6 @@ print("R1 o R2:\n", R_comp)
 """
 
 
-
-"""
-Fuzzy set utilities (example usage commented out above).
-"""
-import numpy as np
-
-# Fuzzy Set Operations
-
-def fuzzy_union(A, B):
-    return np.maximum(A, B)
-
-def fuzzy_intersection(A, B):
-    return np.minimum(A, B)
-
-def fuzzy_complement(A):
-    return 1 - A
-
-def fuzzy_difference(A, B):
-    return np.minimum(A, fuzzy_complement(B))
-
-# Fuzzy Relation (Cartesian Product)
-
-def fuzzy_relation(A, B):
-    # Cartesian product: min(A(x), B(y)) for each pair (x, y)
-    relation = np.zeros((len(A), len(B)))
-    for i in range(len(A)):
-        for j in range(len(B)):
-            relation[i][j] = min(A[i], B[j])
-    return relation
-
-# Max–Min Composition
-
-def maxmin_composition(R1, R2):
-    # R1: m x n, R2: n x p
-    m, n = R1.shape
-    n2, p = R2.shape
-    if n != n2:
-        raise ValueError("Incompatible relation sizes for composition")
-
-    R = np.zeros((m, p))
-    for i in range(m):
-        for j in range(p):
-            R[i][j] = np.max(np.minimum(R1[i, :], R2[:, j]))
-    return R
-
-# ...existing code...
 def specific_rotation(alpha: float, l_cm: float, weight_g: float, volume_ml: float) -> float:
     """
     Calculate specific rotation [α] of a solution.
@@ -161,7 +115,7 @@ def specific_rotation(alpha: float, l_cm: float, weight_g: float, volume_ml: flo
     l_dm = l_cm / 10.0
 
     # Concentration in g per 100 mL
-    p = concentration_g_per_100ml(weight_g, volume_ml)
+    p = (weight_g / volume_ml) * 100.0
 
     if p == 0:
         raise ValueError("Concentration is zero (no solute); specific rotation undefined")
@@ -170,18 +124,6 @@ def specific_rotation(alpha: float, l_cm: float, weight_g: float, volume_ml: flo
     specific_alpha = (100.0 * alpha) / (l_dm * p)
     return specific_alpha
 
-def concentration_g_per_100ml(weight_g: float, volume_ml: float) -> float:
-    """Return concentration in g per 100 mL for given weight (g) and volume (mL)."""
-    if volume_ml <= 0:
-        raise ValueError("volume_ml must be > 0")
-    if weight_g < 0:
-        raise ValueError("weight_g must be >= 0")
-    return (weight_g / volume_ml) * 100.0
-
-__all__ = ["specific_rotation", "concentration_g_per_100ml", "fuzzy_union",
-           "fuzzy_intersection", "fuzzy_complement", "fuzzy_difference",
-           "fuzzy_relation", "maxmin_composition"]
-# ...existing code...
 
 if __name__ == "__main__":
     # Improved CLI-driven example + nicer output formatting
@@ -196,7 +138,6 @@ if __name__ == "__main__":
     parser.add_argument("--length-cm", type=float, dest="l_cm", default=20.0, help="Tube length in cm (default: 20.0)")
     parser.add_argument("--weight-g", type=float, dest="weight_g", default=2.0, help="Mass of solute in g (default: 2.0)")
     parser.add_argument("--volume-ml", type=float, dest="volume_ml", default=100.0, help="Volume of solution in mL (default: 100.0)")
-    parser.add_argument("--precision", type=int, default=6, help="Decimal places for specific rotation output (default: 6)")
     args = parser.parse_args()
 
     try:
@@ -205,14 +146,12 @@ if __name__ == "__main__":
         print("Error:", exc, file=sys.stderr)
         sys.exit(1)
     else:
-        conc = concentration_g_per_100ml(args.weight_g, args.volume_ml)
+        conc = (args.weight_g / args.volume_ml) * 100.0
         print("Specific Rotation Calculation")
         print("-----------------------------")
         print(f"Observed rotation (α): {args.alpha:.3f} °")
         print(f"Tube length (l):      {args.l_cm:.2f} cm")
         print(f"Mass of solute:       {args.weight_g:.3f} g")
-        print(f"Volume of solution:   {args.volume_ml:.2f} mL")
-        print(f"Concentration (p):    {conc:.6g} g/100mL")
-        print()
-        print(f"Specific Rotation [α]: {result:.{args.precision}f} ° · dm⁻¹ · (g/100mL)⁻¹")
-# ...existing code...
+        print(f"Volume of solution:    {args.volume_ml:.2f} mL")
+        print(f"Concentration (p):    {conc:.3f} g/100mL")
+        print(f"\nSpecific Rotation [α]: {result:.6f} ° · dm⁻¹ · (g/100mL)⁻¹")
