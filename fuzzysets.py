@@ -78,7 +78,7 @@ print("R1 o R2:\n", R_comp)
 """
 
 
-# ...existing code...
+
 """
 Fuzzy set utilities (example usage commented out above).
 """
