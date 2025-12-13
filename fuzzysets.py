@@ -77,7 +77,7 @@ print("R1 o R2:\n", R_comp)
 
 """
 
-# ...existing code...
+
 def specific_rotation(alpha: float, l_cm: float, weight_g: float, volume_ml: float) -> float:
     """
     Calculate specific rotation [α] of a solution.
