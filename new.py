@@ -436,13 +436,7 @@ y_pred = nb.predict(X_test)
 print("Accuracy:", accuracy_score(y_test, y_pred))
 
 
-# Test with a new sentence
 
-test_sentence = ["I love this amazing product"]
-test_vector = vectorizer.transform(test_sentence)
-prediction = nb.predict(test_vector)
-
-print("Prediction for test sentence:", prediction[0])
 """
 
 
