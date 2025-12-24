@@ -1,98 +1,90 @@
+# ...existing code...
 import numpy as np
-import matplotlib.pyplot as plt
+import math
+# ...existing code...
 
-"""
-ADALINE training for AND function (batch updates).
-- Uses vectorized batch weight updates.
-- Stops based on MSE change (tolerance) or max_epochs.
-- Deterministic via fixed random seed.
-- Prints linear outputs and discrete predictions (threshold 0.5).
-"""
+def specific_rotation(alpha: float, l_cm: float, weight_g: float, volume_ml: float) -> float:
+    """
+    Calculate specific rotation [α] of a solution.
 
-def train_adaline(X, d, learning_rate=0.1, max_epochs=1000, tolerance=1e-6, seed=None, verbose=False):
-    """Train ADALINE using batch LMS. Returns (weights, mse_history, epoch_reached)."""
-    if seed is not None:
-        np.random.seed(seed)
+    Parameters
+    ----------
+    alpha : float
+        Observed rotation in degrees.
+    l_cm : float
+        Polarimeter tube length in centimeters.
+    weight_g : float
+        Mass of solute (grams) dissolved in the solution.
+    volume_ml : float
+        Volume of the prepared solution in millilitres.
 
-    # Add bias input (column of ones)
-    X_bias = np.hstack((np.ones((X.shape[0], 1)), X))
+    Returns
+    -------
+    float
+        Specific rotation [α] in degrees · dm⁻¹ · (g/100mL)⁻¹
 
-    # Initialize weights randomly (bias + input dims)
-    weights = np.random.uniform(-0.5, 0.5, X_bias.shape[1])
+    Raises
+    ------
+    ValueError
+        If any inputs are non-finite, l_cm <= 0, volume_ml <= 0, or weight_g < 0.
+    """
+    # Validate numeric finiteness
+    if not all(math.isfinite(x) for x in (alpha, l_cm, weight_g, volume_ml)):
+        raise ValueError("All inputs must be finite numbers")
 
-    prev_mse = np.inf
-    n_samples = X_bias.shape[0]
-    mse_history = []
+    # Basic validation
+    if l_cm <= 0:
+        raise ValueError("Tube length (l_cm) must be > 0 cm")
+    if volume_ml <= 0:
+        raise ValueError("Volume (volume_ml) must be > 0 mL")
+    if weight_g < 0:
+        raise ValueError("Weight (weight_g) must be >= 0 g")
 
-    for epoch in range(1, max_epochs + 1):
-        outputs = X_bias.dot(weights)          # shape (n_samples,)
-        errors = d - outputs                   # shape (n_samples,)
+    # Convert path length to dm
+    l_dm = l_cm / 10.0
 
-        # Batch weight update (gradient descent / LMS)
-        weight_update = learning_rate * (X_bias.T.dot(errors)) / n_samples
-        weights += weight_update
+    # Concentration in g per 100 mL
+    p = (weight_g / volume_ml) * 100.0
 
-        mse = np.mean(errors ** 2)
-        mse_history.append(mse)
+    if p <= 0:
+        raise ValueError("Concentration must be > 0 (no solute or invalid inputs)")
 
-        if verbose and epoch % 100 == 0:
-            print(f"Epoch {epoch:4d} MSE: {mse:.6e}")
-
-        # Check for convergence (based on MSE change)
-        if abs(prev_mse - mse) < tolerance:
-            if verbose:
-                print(f"Training converged in {epoch} epoch(s). MSE: {mse:.6e}")
-            return weights, mse_history, epoch
-
-        prev_mse = mse
-
-    if verbose:
-        print(f"Max epochs reached ({max_epochs}). Final MSE: {mse:.6e}")
-    return weights, mse_history, max_epochs
-
-
-def predict_adaline(weights, X):
-    """Return linear outputs and binary predictions (threshold 0.5) for inputs X."""
-    X_bias = np.hstack((np.ones((X.shape[0], 1)), X))
-    linear_outputs = X_bias.dot(weights)
-    predictions = (linear_outputs >= 0.5).astype(int)
-    return linear_outputs, predictions
-
+    # Formula: [α] = 100 * α / (l * p)
+    specific_alpha = (100.0 * alpha) / (l_dm * p)
+    return specific_alpha
+# ...existing code...
 
 if __name__ == "__main__":
-    np.random.seed(42)
+    # Improved CLI-driven example + nicer output formatting
+    import argparse
+    import sys
 
-    # Input samples (AND function, 2 inputs)
-    X = np.array([
-        [0, 0],
-        [0, 1],
-        [1, 0],
-        [1, 1]
-    ])
+    parser = argparse.ArgumentParser(
+        prog="specific_rotation",
+        description="Compute specific rotation [α] for a solution (° · dm⁻¹ · (g/100mL)⁻¹)."
+    )
+    parser.add_argument("--alpha", type=float, default=13.2, help="Observed rotation in degrees (default: 13.2)")
+    parser.add_argument("--length-cm", type=float, dest="l_cm", default=20.0, help="Tube length in cm (default: 20.0)")
+    parser.add_argument("--weight-g", type=float, dest="weight_g", default=2.0, help="Mass of solute in g (default: 2.0)")
+    parser.add_argument("--volume-ml", type=float, dest="volume_ml", default=100.0, help="Volume of solution in mL (default: 100.0)")
+    args = parser.parse_args()
 
-    # Desired outputs
-    d = np.array([0, 0, 0, 1])
-
-    # Train
-    weights, mse_history, epoch_reached = train_adaline(X, d, learning_rate=0.1,
-                                                       max_epochs=1000, tolerance=1e-6,
-                                                       seed=42, verbose=True)
-
-    print("\nFinal weights (including bias):")
-    print(weights)
-
-    # Test the trained ADALINE (linear outputs and discrete predictions)
-    linear_outputs, preds = predict_adaline(weights, X)
-    print("\nTesting on inputs:")
-    for xi, target, lin, p in zip(X, d, linear_outputs, preds):
-        print(f"Input: {xi}, Target: {target}, Linear: {lin:.4f}, Predicted: {p}")
-
-    # Optional: plot MSE history
-    plt.figure(figsize=(6,3))
-    plt.plot(mse_history, lw=1.5)
-    plt.xlabel("Epoch")
-    plt.ylabel("MSE")
-    plt.title("ADALINE training MSE")
-    plt.grid(alpha=0.25)
-    plt.tight_layout()
-    plt.show()
+    # Validate parsed values before computation
+    try:
+        if not all(math.isfinite(x) for x in (args.alpha, args.l_cm, args.weight_g, args.volume_ml)):
+            raise ValueError("All inputs must be finite numbers")
+        result = specific_rotation(args.alpha, args.l_cm, args.weight_g, args.volume_ml)
+    except ValueError as exc:
+        print("Error:", exc, file=sys.stderr)
+        sys.exit(2)
+    else:
+        conc = (args.weight_g / args.volume_ml) * 100.0
+        print("Specific Rotation Calculation")
+        print("-----------------------------")
+        print(f"Observed rotation (α): {args.alpha:.6f} °")
+        print(f"Tube length (l):      {args.l_cm:.3f} cm")
+        print(f"Mass of solute:       {args.weight_g:.6f} g")
+        print(f"Volume of solution:   {args.volume_ml:.6f} mL")
+        print(f"Concentration (p):    {conc:.6f} g/100mL")
+        print(f"\nSpecific Rotation [α]: {result:.6f} ° · dm⁻¹ · (g/100mL)⁻¹")
+# ...existing code...
