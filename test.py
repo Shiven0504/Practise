@@ -98,141 +98,109 @@ plt.tight_layout()
 plt.show()
 
 """
-# ...existing code...
-"""
-Fuzzy set utilities (example usage commented out above).
-"""
+
 import numpy as np
+import matplotlib.pyplot as plt
 
-# Fuzzy Set Operations
+from sklearn.neural_network import MLPClassifier
 
-def fuzzy_union(A, B):
-    return np.maximum(A, B)
 
-def fuzzy_intersection(A, B):
-    return np.minimum(A, B)
-
-def fuzzy_complement(A):
-    return 1 - A
-
-def fuzzy_difference(A, B):
-    return np.minimum(A, fuzzy_complement(B))
-
-# Fuzzy Relation (Cartesian Product)
-
-def fuzzy_relation(A, B):
-    # Cartesian product: min(A(x), B(y)) for each pair (x, y)
-    relation = np.zeros((len(A), len(B)))
-    for i in range(len(A)):
-        for j in range(len(B)):
-            relation[i][j] = min(A[i], B[j])
-    return relation
-
-# Max–Min Composition
-
-def maxmin_composition(R1, R2):
-    # R1: m x n, R2: n x p
-    m, n = R1.shape
-    n2, p = R2.shape
-    if n != n2:
-        raise ValueError("Incompatible relation sizes for composition")
-
-    R = np.zeros((m, p))
-    for i in range(m):
-        for j in range(p):
-            R[i][j] = np.max(np.minimum(R1[i, :], R2[:, j]))
-    return R
-
-# ...existing code...
-def specific_rotation(alpha: float, l_cm: float, weight_g: float, volume_ml: float) -> float:
+def fuzzy_temperature_demo(sample_temps=None, plot=True, save_plot=False, out_path="temperature_fuzzy_sets.png"):
     """
-    Calculate specific rotation [α] of a solution.
-
-    Parameters
-    ----------
-    alpha : float
-        Observed rotation in degrees.
-    l_cm : float
-        Polarimeter tube length in centimeters.
-    weight_g : float
-        Mass of solute (grams) dissolved in the solution.
-    volume_ml : float
-        Volume of the prepared solution in millilitres.
-
-    Returns
-    -------
-    float
-        Specific rotation [α] in degrees · dm⁻¹ · (g/100mL)⁻¹
-
-    Raises
-    ------
-    ValueError
-        If l_cm <= 0, volume_ml <= 0, or weight_g < 0.
+    Demonstrate temperature fuzzy sets (cold, warm, hot), print a table of memberships
+    for sample temperatures and optionally plot the membership functions.
     """
-    # Basic validation
-    if l_cm <= 0:
-        raise ValueError("Tube length (l_cm) must be > 0 cm")
-    if volume_ml <= 0:
-        raise ValueError("Volume (volume_ml) must be > 0 mL")
-    if weight_g < 0:
-        raise ValueError("Weight (weight_g) must be >= 0 g")
+    # Provide minimal local implementations of triangular membership and interpolation
+    # so the demo runs even if scikit-fuzzy is not installed (and to avoid import errors in editors).
+    def _trimf(x, abc):
+        a, b, c = abc
+        x = np.asarray(x, dtype=float)
+        y = np.zeros_like(x, dtype=float)
+        # rising edge a..b
+        if b != a:
+            idx = (x >= a) & (x <= b)
+            y[idx] = (x[idx] - a) / (b - a)
+        else:
+            y[x == a] = 1.0
+        # falling edge b..c
+        if c != b:
+            idx = (x >= b) & (x <= c)
+            y[idx] = (c - x[idx]) / (c - b)
+        else:
+            y[x == c] = 1.0
+        return np.clip(y, 0.0, 1.0)
 
-    # Convert path length to dm
-    l_dm = l_cm / 10.0
+    def _interp_membership(x, mf, value):
+        # linear interpolation to evaluate membership at a scalar value
+        return float(np.interp(value, x, mf))
 
-    # Concentration in g per 100 mL
-    p = concentration_g_per_100ml(weight_g, volume_ml)
+    # Try to use scikit-fuzzy if available, otherwise fall back to local functions.
+    try:
+        import skfuzzy as fuzz  # type: ignore
+        trimf = fuzz.trimf
+        interp_membership = fuzz.interp_membership
+    except Exception:
+        trimf = _trimf
+        interp_membership = _interp_membership
 
-    if p == 0:
-        raise ValueError("Concentration is zero (no solute); specific rotation undefined")
+    x_temp = np.arange(0, 41, 1)                 # universe: 0..40 °C
+    cold = trimf(x_temp, [0, 0, 20])
+    warm = trimf(x_temp, [10, 20, 30])
+    hot  = trimf(x_temp, [20, 40, 40])
 
-    # Formula: [α] = 100 * α / (l * p)
-    specific_alpha = (100.0 * alpha) / (l_dm * p)
-    return specific_alpha
+    if sample_temps is None:
+        sample_temps = np.array([0, 5, 10, 15, 20, 25, 30, 35, 40])
 
-def concentration_g_per_100ml(weight_g: float, volume_ml: float) -> float:
-    """Return concentration in g per 100 mL for given weight (g) and volume (mL)."""
-    if volume_ml <= 0:
-        raise ValueError("volume_ml must be > 0")
-    if weight_g < 0:
-        raise ValueError("weight_g must be >= 0")
-    return (weight_g / volume_ml) * 100.0
+    cold_m = np.array([interp_membership(x_temp, cold, t) for t in sample_temps])
+    warm_m = np.array([interp_membership(x_temp, warm, t) for t in sample_temps])
+    hot_m  = np.array([interp_membership(x_temp, hot, t)  for t in sample_temps])
 
-__all__ = ["specific_rotation", "concentration_g_per_100ml", "fuzzy_union",
-           "fuzzy_intersection", "fuzzy_complement", "fuzzy_difference",
-           "fuzzy_relation", "maxmin_composition"]
-# ...existing code...
+    # Print a tidy table
+    print("\n--- Fuzzy Logic Example (Temperature) ---")
+    print("Temp |  cold  |  warm  |   hot ")
+    print("--------------------------------")
+    for t, c, w, h in zip(sample_temps, cold_m, warm_m, hot_m):
+        print(f"{t:4d} | {c:6.3f} | {w:6.3f} | {h:6.3f}")
+
+    if plot:
+        plt.figure(figsize=(7, 3.5))
+        plt.plot(x_temp, cold, label="cold", lw=2)
+        plt.plot(x_temp, warm, label="warm", lw=2)
+        plt.plot(x_temp, hot,  label="hot",  lw=2)
+        plt.scatter(sample_temps, cold_m, c='C0', s=25, zorder=5)
+        plt.scatter(sample_temps, warm_m, c='C1', s=25, zorder=5)
+        plt.scatter(sample_temps, hot_m,  c='C2', s=25, zorder=5)
+        plt.xlabel("Temperature (°C)")
+        plt.ylabel("Membership degree")
+        plt.title("Temperature fuzzy sets")
+        plt.legend(loc="upper right")
+        plt.grid(alpha=0.25)
+        plt.tight_layout()
+        if save_plot:
+            plt.savefig(out_path, dpi=150)
+            print(f"Saved plot to: {out_path}")
+        plt.show()
+
+
+def run_nn_and_fuzzy():
+    # Example: AND function with Neural Network
+    X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+    y = np.array([0, 0, 0, 1])  # AND output
+
+    # Use a deterministic solver for this tiny dataset and set random_state for reproducibility
+    nn = MLPClassifier(hidden_layer_sizes=(2,), max_iter=1000, learning_rate_init=0.1,
+                       solver='lbfgs', random_state=1)
+    nn.fit(X, y)
+
+    preds = nn.predict(X)
+    print("\n--- Neural Network Example ---")
+    print("Predictions for AND gate:", preds)
+    print("Expected:", y)
+    print("Accuracy:", (preds == y).mean())
+
+    # Run fuzzy demo (skfuzzy optional)
+    fuzzy_temperature_demo()
+
 
 if __name__ == "__main__":
-    # Improved CLI-driven example + nicer output formatting
-    import argparse
-    import sys
-
-    parser = argparse.ArgumentParser(
-        prog="specific_rotation",
-        description="Compute specific rotation [α] for a solution (° · dm⁻¹ · (g/100mL)⁻¹)."
-    )
-    parser.add_argument("--alpha", type=float, default=13.2, help="Observed rotation in degrees (default: 13.2)")
-    parser.add_argument("--length-cm", type=float, dest="l_cm", default=20.0, help="Tube length in cm (default: 20.0)")
-    parser.add_argument("--weight-g", type=float, dest="weight_g", default=2.0, help="Mass of solute in g (default: 2.0)")
-    parser.add_argument("--volume-ml", type=float, dest="volume_ml", default=100.0, help="Volume of solution in mL (default: 100.0)")
-    parser.add_argument("--precision", type=int, default=6, help="Decimal places for specific rotation output (default: 6)")
-    args = parser.parse_args()
-
-    try:
-        result = specific_rotation(args.alpha, args.l_cm, args.weight_g, args.volume_ml)
-    except ValueError as exc:
-        print("Error:", exc, file=sys.stderr)
-        sys.exit(1)
-    else:
-        conc = concentration_g_per_100ml(args.weight_g, args.volume_ml)
-        print("Specific Rotation Calculation")
-        print("-----------------------------")
-        print(f"Observed rotation (α): {args.alpha:.3f} °")
-        print(f"Tube length (l):      {args.l_cm:.2f} cm")
-        print(f"Mass of solute:       {args.weight_g:.3f} g")
-        print(f"Volume of solution:   {args.volume_ml:.2f} mL")
-        print(f"Concentration (p):    {conc:.6g} g/100mL")
-        print()
-        print(f"Specific Rotation [α]: {result:.{args.precision}f} ° · dm⁻¹ · (g/100mL)⁻¹")
-# ...existing code...
+    run_nn_and_fuzzy()
