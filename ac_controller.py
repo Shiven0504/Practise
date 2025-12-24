@@ -71,93 +71,82 @@ if __name__ == "__main__":
     plt.show()
 """
 
-import random# ...existing code...
+import random
 import numpy as np
-import math
-# ...existing code...
+import matplotlib.pyplot as plt
+from deap import base, creator, tools, algorithms
 
-def specific_rotation(alpha: float, l_cm: float, weight_g: float, volume_ml: float) -> float:
-    """
-    Calculate specific rotation [α] of a solution.
+def total_distance(tour, dist_matrix):
+    distance = 0
+    for i in range(len(tour) - 1):
+        distance += dist_matrix[tour[i]][tour[i + 1]]
+    distance += dist_matrix[tour[-1]][tour[0]]  # Return to starting city
+    return distance
 
-    Parameters
-    ----------
-    alpha : float
-        Observed rotation in degrees.
-    l_cm : float
-        Polarimeter tube length in centimeters.
-    weight_g : float
-        Mass of solute (grams) dissolved in the solution.
-    volume_ml : float
-        Volume of the prepared solution in millilitres.
+def setup_and_run_ga(num_cities=10, seed=1, pop_size=100, ngen=20, cxpb=0.7, mutpb=0.2):
+    # reproducibility
+    random.seed(seed)
+    np.random.seed(seed)
 
-    Returns
-    -------
-    float
-        Specific rotation [α] in degrees · dm⁻¹ · (g/100mL)⁻¹
+    cities = np.random.rand(num_cities, 2) * 100
+    dist_matrix = np.linalg.norm(cities[:, np.newaxis] - cities[np.newaxis, :], axis=2)
 
-    Raises
-    ------
-    ValueError
-        If any inputs are non-finite, l_cm <= 0, volume_ml <= 0, or weight_g < 0.
-    """
-    # Validate numeric finiteness
-    if not all(math.isfinite(x) for x in (alpha, l_cm, weight_g, volume_ml)):
-        raise ValueError("All inputs must be finite numbers")
+    # avoid re-creating creators if module is reloaded
+    try:
+        creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
+        creator.create("Individual", list, fitness=creator.FitnessMin)
+    except Exception:
+        # creators already exist in this session
+        pass
 
-    # Basic validation
-    if l_cm <= 0:
-        raise ValueError("Tube length (l_cm) must be > 0 cm")
-    if volume_ml <= 0:
-        raise ValueError("Volume (volume_ml) must be > 0 mL")
-    if weight_g < 0:
-        raise ValueError("Weight (weight_g) must be >= 0 g")
+    toolbox = base.Toolbox()
+    toolbox.register("indices", random.sample, range(num_cities), num_cities)
+    toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.indices)
+    toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
-    # Convert path length to dm
-    l_dm = l_cm / 10.0
+    def evaluate(individual):
+        return (total_distance(individual, dist_matrix),)
 
-    # Concentration in g per 100 mL
-    p = (weight_g / volume_ml) * 100.0
+    toolbox.register("evaluate", evaluate)
+    toolbox.register("mate", tools.cxOrdered)
+    toolbox.register("mutate", tools.mutShuffleIndexes, indpb=0.05)
+    toolbox.register("select", tools.selTournament, tournsize=3)
 
-    if p <= 0:
-        raise ValueError("Concentration must be > 0 (no solute or invalid inputs)")
+    print("Starting Genetic Algorithm for TSP...\n")
 
-    # Formula: [α] = 100 * α / (l * p)
-    specific_alpha = (100.0 * alpha) / (l_dm * p)
-    return specific_alpha
-# ...existing code...
+    population = toolbox.population(n=pop_size)
+
+    stats = tools.Statistics(lambda ind: ind.fitness.values)
+    stats.register("avg", np.mean)
+    stats.register("min", np.min)
+    stats.register("max", np.max)
+
+    pop, log = algorithms.eaSimple(population, toolbox, cxpb=cxpb, mutpb=mutpb,
+                                   ngen=ngen, stats=stats, verbose=True)
+
+    # select best from final population
+    best_ind = tools.selBest(pop, 1)[0]
+    min_dist = total_distance(best_ind, dist_matrix)
+
+    print("\n--- GA Finished ---")
+    print("Best tour found:")
+    print(list(best_ind))
+    print(f"Minimum tour distance: {min_dist:.2f}")
+
+    # Plot result
+    plt.figure(figsize=(7, 6))
+    plt.scatter(cities[:, 0], cities[:, 1], c='blue', s=50, label="Cities")
+
+    tour_idx = list(best_ind) + [best_ind[0]]  # Return to start
+    tour_coords = cities[tour_idx]
+    plt.plot(tour_coords[:, 0], tour_coords[:, 1], 'r-', linewidth=1.5, label="Best Path")
+    plt.title(f"Best Tour Found (Distance: {min_dist:.2f})")
+    plt.xlabel("X Coordinate")
+    plt.ylabel("Y Coordinate")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
 
 if __name__ == "__main__":
-    # Improved CLI-driven example + nicer output formatting
-    import argparse
-    import sys
-
-    parser = argparse.ArgumentParser(
-        prog="specific_rotation",
-        description="Compute specific rotation [α] for a solution (° · dm⁻¹ · (g/100mL)⁻¹)."
-    )
-    parser.add_argument("--alpha", type=float, default=13.2, help="Observed rotation in degrees (default: 13.2)")
-    parser.add_argument("--length-cm", type=float, dest="l_cm", default=20.0, help="Tube length in cm (default: 20.0)")
-    parser.add_argument("--weight-g", type=float, dest="weight_g", default=2.0, help="Mass of solute in g (default: 2.0)")
-    parser.add_argument("--volume-ml", type=float, dest="volume_ml", default=100.0, help="Volume of solution in mL (default: 100.0)")
-    args = parser.parse_args()
-
-    # Validate parsed values before computation
-    try:
-        if not all(math.isfinite(x) for x in (args.alpha, args.l_cm, args.weight_g, args.volume_ml)):
-            raise ValueError("All inputs must be finite numbers")
-        result = specific_rotation(args.alpha, args.l_cm, args.weight_g, args.volume_ml)
-    except ValueError as exc:
-        print("Error:", exc, file=sys.stderr)
-        sys.exit(2)
-    else:
-        conc = (args.weight_g / args.volume_ml) * 100.0
-        print("Specific Rotation Calculation")
-        print("-----------------------------")
-        print(f"Observed rotation (α): {args.alpha:.6f} °")
-        print(f"Tube length (l):      {args.l_cm:.3f} cm")
-        print(f"Mass of solute:       {args.weight_g:.6f} g")
-        print(f"Volume of solution:   {args.volume_ml:.6f} mL")
-        print(f"Concentration (p):    {conc:.6f} g/100mL")
-        print(f"\nSpecific Rotation [α]: {result:.6f} ° · dm⁻¹ · (g/100mL)⁻¹")
-# ...existing code...
+    setup_and_run_ga(num_cities=10, seed=1, pop_size=100, ngen=20, cxpb=0.7, mutpb=0.2)
