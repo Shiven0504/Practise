@@ -1,4 +1,4 @@
-// ...existing code...
+
 # --- 2) Fuzzy Logic (using scikit-fuzzy) ---
 def fuzzy_temperature_demo(sample_temps=None, plot=True, save_plot=False, out_path="temperature_fuzzy_sets.png"):
     """
