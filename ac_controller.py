@@ -70,7 +70,7 @@ if __name__ == "__main__":
     plt.tight_layout() 
     plt.show()
 """
-# ...existing code...
+
 import random
 import numpy as np
 import matplotlib.pyplot as plt
@@ -150,4 +150,3 @@ def setup_and_run_ga(num_cities=10, seed=1, pop_size=100, ngen=20, cxpb=0.7, mut
 
 if __name__ == "__main__":
     setup_and_run_ga(num_cities=10, seed=1, pop_size=100, ngen=20, cxpb=0.7, mutpb=0.2)
-# ...existing code...
