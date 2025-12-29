@@ -80,19 +80,3 @@ if __name__ == "__main__":
 
     print("\nFinal weights (including bias):")
     print(weights)
-
-    # Test the trained ADALINE (linear outputs and discrete predictions)
-    linear_outputs, preds = predict_adaline(weights, X)
-    print("\nTesting on inputs:")
-    for xi, target, lin, p in zip(X, d, linear_outputs, preds):
-        print(f"Input: {xi}, Target: {target}, Linear: {lin:.4f}, Predicted: {p}")
-
-    # Optional: plot MSE history
-    plt.figure(figsize=(6,3))
-    plt.plot(mse_history, lw=1.5)
-    plt.xlabel("Epoch")
-    plt.ylabel("MSE")
-    plt.title("ADALINE training MSE")
-    plt.grid(alpha=0.25)
-    plt.tight_layout()
-    plt.show()
