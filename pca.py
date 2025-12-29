@@ -111,3 +111,10 @@ data = {
 
 df = pd.DataFrame(data)
 
+# Step 5: Train ID3 Tree
+features = ['Outlook', 'Temperature', 'Humidity', 'Wind']
+tree = id3(df, df, features)
+
+# Output the tree
+print("Generated Decision Tree (ID3):")
+print(tree)
