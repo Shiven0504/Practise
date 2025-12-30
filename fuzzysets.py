@@ -140,18 +140,4 @@ if __name__ == "__main__":
     parser.add_argument("--volume-ml", type=float, dest="volume_ml", default=100.0, help="Volume of solution in mL (default: 100.0)")
     args = parser.parse_args()
 
-    try:
-        result = specific_rotation(args.alpha, args.l_cm, args.weight_g, args.volume_ml)
-    except ValueError as exc:
-        print("Error:", exc, file=sys.stderr)
-        sys.exit(1)
-    else:
-        conc = (args.weight_g / args.volume_ml) * 100.0
-        print("Specific Rotation Calculation")
-        print("-----------------------------")
-        print(f"Observed rotation (α): {args.alpha:.3f} °")
-        print(f"Tube length (l):      {args.l_cm:.2f} cm")
-        print(f"Mass of solute:       {args.weight_g:.3f} g")
-        print(f"Volume of solution:    {args.volume_ml:.2f} mL")
-        print(f"Concentration (p):    {conc:.3f} g/100mL")
-        print(f"\nSpecific Rotation [α]: {result:.6f} ° · dm⁻¹ · (g/100mL)⁻¹")
+    
