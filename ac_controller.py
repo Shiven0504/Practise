@@ -70,83 +70,75 @@ if __name__ == "__main__":
     plt.tight_layout() 
     plt.show()
 """
-
-import random
-import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
-from deap import base, creator, tools, algorithms
+from typing import Tuple
 
-def total_distance(tour, dist_matrix):
-    distance = 0
-    for i in range(len(tour) - 1):
-        distance += dist_matrix[tour[i]][tour[i + 1]]
-    distance += dist_matrix[tour[-1]][tour[0]]  # Return to starting city
-    return distance
+def analyze_employee_data(df: pd.DataFrame, plot: bool = False) -> Tuple[pd.Series, pd.DataFrame]:
+    """
+    Print summary and group-wise aggregations for employee data.
 
-def setup_and_run_ga(num_cities=10, seed=1, pop_size=100, ngen=20, cxpb=0.7, mutpb=0.2):
-    # reproducibility
-    random.seed(seed)
-    np.random.seed(seed)
+    Expects columns: Name, Department, Salary, Experience.
+    Returns (avg_salary_by_dept, agg_results_df).
+    """
+    required = {"Name", "Department", "Salary", "Experience"}
+    if not required.issubset(df.columns):
+        raise ValueError(f"DataFrame must contain columns: {required}")
 
-    cities = np.random.rand(num_cities, 2) * 100
-    dist_matrix = np.linalg.norm(cities[:, np.newaxis] - cities[np.newaxis, :], axis=2)
+    if df.empty:
+        print("DataFrame is empty.")
+        return pd.Series(dtype=float), pd.DataFrame()
 
-    # avoid re-creating creators if module is reloaded
-    try:
-        creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
-        creator.create("Individual", list, fitness=creator.FitnessMin)
-    except Exception:
-        # creators already exist in this session
-        pass
+    print("=== Original DataFrame ===")
+    print(df.to_string(index=False), "\n")
 
-    toolbox = base.Toolbox()
-    toolbox.register("indices", random.sample, range(num_cities), num_cities)
-    toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.indices)
-    toolbox.register("population", tools.initRepeat, list, toolbox.individual)
+    # 1. Overall Aggregation
+    print("=== Overall Salary Statistics ===")
+    overall = df["Salary"].agg(["mean", "max", "min"]).rename({"mean": "mean", "max": "max", "min": "min"})
+    print(overall.to_frame().T.round(2), "\n")
 
-    def evaluate(individual):
-        return (total_distance(individual, dist_matrix),)
+    # 2. Group-wise Aggregation (Sorted by Average Salary)
+    print("=== Average Salary by Department (Sorted) ===")
+    avg_salary = df.groupby("Department")["Salary"].mean().sort_values(ascending=False)
+    print(avg_salary.round(2), "\n")
 
-    toolbox.register("evaluate", evaluate)
-    toolbox.register("mate", tools.cxOrdered)
-    toolbox.register("mutate", tools.mutShuffleIndexes, indpb=0.05)
-    toolbox.register("select", tools.selTournament, tournsize=3)
+    # 3. Multiple Aggregations per Group
+    print("=== Aggregated Salary & Experience by Department ===")
+    agg_results = (
+        df.groupby("Department")
+          .agg(
+              Avg_Salary=("Salary", "mean"),
+              Max_Salary=("Salary", "max"),
+              Min_Salary=("Salary", "min"),
+              Avg_Experience=("Experience", "mean")
+          )
+          .sort_values(by="Avg_Salary", ascending=False)
+          .round(2)
+    )
+    print(agg_results, "\n")
 
-    print("Starting Genetic Algorithm for TSP...\n")
+    # 4. Employee Count per Department
+    print("=== Employee Count by Department ===")
+    counts = df["Department"].value_counts()
+    print(counts, "\n")
 
-    population = toolbox.population(n=pop_size)
+    if plot:
+        fig, ax = plt.subplots(1, 2, figsize=(10, 4))
+        avg_salary.plot(kind="bar", ax=ax[0], title="Avg Salary by Department")
+        agg_results[["Avg_Experience"]].plot(kind="bar", ax=ax[1], title="Avg Experience by Department", legend=False)
+        plt.tight_layout()
+        plt.show()
 
-    stats = tools.Statistics(lambda ind: ind.fitness.values)
-    stats.register("avg", np.mean)
-    stats.register("min", np.min)
-    stats.register("max", np.max)
+    return avg_salary, agg_results
 
-    pop, log = algorithms.eaSimple(population, toolbox, cxpb=cxpb, mutpb=mutpb,
-                                   ngen=ngen, stats=stats, verbose=True)
-
-    # select best from final population
-    best_ind = tools.selBest(pop, 1)[0]
-    min_dist = total_distance(best_ind, dist_matrix)
-
-    print("\n--- GA Finished ---")
-    print("Best tour found:")
-    print(list(best_ind))
-    print(f"Minimum tour distance: {min_dist:.2f}")
-
-    # Plot result
-    plt.figure(figsize=(7, 6))
-    plt.scatter(cities[:, 0], cities[:, 1], c='blue', s=50, label="Cities")
-
-    tour_idx = list(best_ind) + [best_ind[0]]  # Return to start
-    tour_coords = cities[tour_idx]
-    plt.plot(tour_coords[:, 0], tour_coords[:, 1], 'r-', linewidth=1.5, label="Best Path")
-    plt.title(f"Best Tour Found (Distance: {min_dist:.2f})")
-    plt.xlabel("X Coordinate")
-    plt.ylabel("Y Coordinate")
-    plt.legend()
-    plt.grid(True)
-    plt.tight_layout()
-    plt.show()
-
+# ---- Sample Dataset ----
 if __name__ == "__main__":
-    setup_and_run_ga(num_cities=10, seed=1, pop_size=100, ngen=20, cxpb=0.7, mutpb=0.2)
+    data = {
+        "Name": ["Alice", "Bob", "Charlie", "David", "Eve", "Frank"],
+        "Department": ["HR", "IT", "IT", "Finance", "HR", "Finance"],
+        "Salary": [50000, 60000, 55000, 65000, 52000, 70000],
+        "Experience": [2, 5, 3, 7, 4, 10]
+    }
+
+    df = pd.DataFrame(data)
+    avg_salary, agg_results = analyze_employee_data(df, plot=False)
