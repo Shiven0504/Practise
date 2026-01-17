@@ -160,7 +160,7 @@ def fuzzy_temperature_demo(sample_temps=None, plot=True, save_plot=False, out_pa
     print("Temp |  cold  |  warm  |   hot ")
     print("--------------------------------")
     for t, c, w, h in zip(sample_temps, cold_m, warm_m, hot_m):
-        print(f"{t:4d} | {c:6.3f} | {w:6.3f} | {h:6.3f}")
+        print(f"{int(t):4d} | {c:6.3f} | {w:6.3f} | {h:6.3f}")
 
     if plot:
         plt.figure(figsize=(7, 3.5))
@@ -182,25 +182,43 @@ def fuzzy_temperature_demo(sample_temps=None, plot=True, save_plot=False, out_pa
         plt.show()
 
 
-def run_nn_and_fuzzy():
-    # Example: AND function with Neural Network
-    X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
-    y = np.array([0, 0, 0, 1])  # AND output
+def run_nn_and_fuzzy(seed=1, plot=True, save_plot=False, out_path="temperature_fuzzy_sets.png", run_nn=True):
+    """
+    Run a small neural network demo (AND gate) and the fuzzy temperature demo.
+    Parameters control plotting, saving, seed, and whether to run the NN.
+    """
+    if run_nn:
+        try:
+            # Example: AND function with Neural Network
+            X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+            y = np.array([0, 0, 0, 1])  # AND output
 
-    # Use a deterministic solver for this tiny dataset and set random_state for reproducibility
-    nn = MLPClassifier(hidden_layer_sizes=(2,), max_iter=1000, learning_rate_init=0.1,
-                       solver='lbfgs', random_state=1)
-    nn.fit(X, y)
+            # Use a deterministic solver for this tiny dataset and set random_state for reproducibility
+            nn = MLPClassifier(hidden_layer_sizes=(2,), max_iter=1000, learning_rate_init=0.1,
+                               solver='lbfgs', random_state=seed)
+            nn.fit(X, y)
 
-    preds = nn.predict(X)
-    print("\n--- Neural Network Example ---")
-    print("Predictions for AND gate:", preds)
-    print("Expected:", y)
-    print("Accuracy:", (preds == y).mean())
+            preds = nn.predict(X)
+            print("\n--- Neural Network Example ---")
+            print("Predictions for AND gate:", preds)
+            print("Expected:", y)
+            print("Accuracy:", (preds == y).mean())
+        except Exception as e:
+            print("Neural network demo skipped (sklearn issue):", str(e))
 
-    # Run fuzzy demo (skfuzzy optional)
-    fuzzy_temperature_demo()
+    # Run fuzzy demo (scikit-fuzzy optional)
+    fuzzy_temperature_demo(plot=plot, save_plot=save_plot, out_path=out_path)
 
 
 if __name__ == "__main__":
-    run_nn_and_fuzzy()
+    # Add a small CLI so the script is easier to run with different options
+    import argparse
+    parser = argparse.ArgumentParser(description="Run NN AND demo and fuzzy temperature demo.")
+    parser.add_argument("--no-plot", action="store_true", help="Do not show plots.")
+    parser.add_argument("--save-plot", action="store_true", help="Save fuzzy plot to disk.")
+    parser.add_argument("--out", default="temperature_fuzzy_sets.png", help="Output path for saved plot.")
+    parser.add_argument("--seed", type=int, default=1, help="Random seed / NN random_state.")
+    parser.add_argument("--skip-nn", action="store_true", help="Skip neural network demo.")
+    args = parser.parse_args()
+
+    run_nn_and_fuzzy(seed=args.seed, plot=not args.no_plot, save_plot=args.save_plot, out_path=args.out, run_nn=not args.skip_nn)
