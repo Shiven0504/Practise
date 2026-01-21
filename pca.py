@@ -1,120 +1,224 @@
+# ...existing code...
 """
+from matplotlib import pyplot as plt
+
+import seaborn as sns
 import numpy as np
-import pandas as pd
-from sklearn.datasets import load_iris
-from sklearn.preprocessing import StandardScaler
-from sklearn.decomposition import PCA
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
+
+#print(sns.get_dataset_names())
+tips = sns.load_dataset("tips")
+#print(tips.head())
+iris = sns.load_dataset("iris")
+#print(iris.head())
+titanic = sns.load_dataset("titanic")
+#print(titanic.head())
+planets = sns.load_dataset("planets")
+#print(planets.head())
+
+
+#sns.scatterplot(x="tip", y="total_bill", data=tips, hue="day", size="size", palette="YlGnBu")
+
+#sns.histplot(tips['tip'], kde=True, bins=30)
+
+#sns.boxplot(x="day", y="tip", data=tips, hue="sex", palette="YlGnBu")
+
+#sns.stripplot(x="day", y="tip", data=tips, hue="sex", palette="YlGnBu", dodge=True)
+
+#sns.jointplot(x="tip", y="total_bill", data=tips, kind="hex", cmap="YlGnBu")
+
+#sns.pairplot(titanic.select_dtypes(['number']), hue='pclass')
+
+sns.heatmap(titanic.select_dtypes(include=['number']).corr(), annot=True, cmap="YlGnBu")
+
+plt.show()
+
+# Generate 100 random data points along 3 dimensions
+x, y, scale = np.random.randn(3, 100)
+fig, ax = plt.subplots()
+
+# Map each onto a scatterplot we'll create with Matplotlib
+ax.scatter(x=x, y=y, c=scale, s=np.abs(scale)*500)
+ax.set(title="Some random data, created with JupyterLab!")
+plt.show()
+
+
+
+
+
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.decomposition import FastICA
+
+# Step 1: Generate sample signals (simulating two people talking)
+np.random.seed(0)
+time = np.linspace(0, 10, 1000)
+
+s1 = np.sin(2 * time)         # Signal 1: Sine wave
+s2 = np.sign(np.sin(3 * time))  # Signal 2: Square wave (like voice pulses)
+
+S = np.c_[s1, s2]  # Stack signals column-wise
+S = S + 0.2 * np.random.normal(size=S.shape)  # Add noise
+
+# Step 2: Mix signals (simulating microphone recordings)
+A = np.array([[1, 0.5], [0.5, 1]])  # Mixing matrix
+X = np.dot(S, A.T)  # Mixed signals
+
+# Step 3: Apply ICA to recover original signals
+ica = FastICA(n_components=2)
+S_ica = ica.fit_transform(X)  # Reconstructed signals
+
+# Plotting
+plt.figure(figsize=(12, 8))
+
+plt.subplot(3, 1, 1)
+plt.title("Original Signals (Sources)")
+plt.plot(time, S)
+plt.xlabel("Time")
+plt.ylabel("Amplitude")
+plt.legend(["Signal 1", "Signal 2"])
+plt.grid(True)
+
+plt.subplot(3, 1, 2)
+plt.title("Mixed Signals (Microphone Inputs)")
+plt.plot(time, X)
+plt.xlabel("Time")
+plt.ylabel("Amplitude")
+plt.legend(["Mic 1", "Mic 2"])
+plt.grid(True)
+
+plt.subplot(3, 1, 3)
+plt.title("Recovered Signals using ICA")
+plt.plot(time, S_ica)
+plt.xlabel("Time")
+plt.ylabel("Amplitude")
+plt.legend(["Recovered 1", "Recovered 2"])
+plt.grid(True)
+
+plt.tight_layout()
+plt.show()
+
+"""
+
+import numpy as np
 import matplotlib.pyplot as plt
 
-# Load Dataset
-data = load_iris()
-X = data.data
-y = data.target
-target_names = data.target_names
-
-# Standardize the data
-scaler = StandardScaler()
-X_scaled = scaler.fit_transform(X)
-
-# -------------------------
-# 1️⃣ Principal Component Analysis (PCA)
-# -------------------------
-pca = PCA(n_components=2)  # Reduce to 2 dimensions
-X_pca = pca.fit_transform(X_scaled)
-
-plt.figure(figsize=(7,5))
-for i, target in enumerate(np.unique(y)):
-    plt.scatter(X_pca[y == target, 0], X_pca[y == target, 1], label=target_names[i])
-plt.title("PCA - 2D Projection")
-plt.xlabel("PC1")
-plt.ylabel("PC2")
-plt.legend()
-plt.show()
-
-print("Explained Variance Ratio (PCA):", pca.explained_variance_ratio_)
-
-# -------------------------
-# 2️⃣ Linear Discriminant Analysis (LDA)
-# -------------------------
-lda = LDA(n_components=2)
-X_lda = lda.fit_transform(X_scaled, y)
-
-plt.figure(figsize=(7,5))
-for i, target in enumerate(np.unique(y)):
-    plt.scatter(X_lda[y == target, 0], X_lda[y == target, 1], label=target_names[i])
-plt.title("LDA - 2D Projection")
-plt.xlabel("LD1")
-plt.ylabel("LD2")
-plt.legend()
-plt.show()
-"""
+from sklearn.neural_network import MLPClassifier
 
 
-import pandas as pd
-import numpy as np
-from math import log2
+def fuzzy_temperature_demo(sample_temps=None, plot=True, save_plot=False, out_path="temperature_fuzzy_sets.png"):
+    """
+    Demonstrate temperature fuzzy sets (cold, warm, hot), print a table of memberships
+    for sample temperatures and optionally plot the membership functions.
+    """
+    # Provide minimal local implementations of triangular membership and interpolation
+    # so the demo runs even if scikit-fuzzy is not installed (and to avoid import errors in editors).
+    def _trimf(x, abc):
+        a, b, c = abc
+        x = np.asarray(x, dtype=float)
+        y = np.zeros_like(x, dtype=float)
+        # rising edge a..b
+        if b != a:
+            idx = (x >= a) & (x <= b)
+            y[idx] = (x[idx] - a) / (b - a)
+        else:
+            y[x == a] = 1.0
+        # falling edge b..c
+        if c != b:
+            idx = (x >= b) & (x <= c)
+            y[idx] = (c - x[idx]) / (c - b)
+        else:
+            y[x == c] = 1.0
+        return np.clip(y, 0.0, 1.0)
 
-# Step 1: Entropy Function
-def entropy(target_col):
-    values, counts = np.unique(target_col, return_counts=True)
-    entropy_val = -sum((counts[i]/sum(counts)) * log2(counts[i]/sum(counts)) for i in range(len(values)))
-    return entropy_val
+    def _interp_membership(x, mf, value):
+        # linear interpolation to evaluate membership at a scalar value
+        return float(np.interp(value, x, mf))
 
-# Step 2: Information Gain
-def info_gain(data, split_attribute, target_name="Play"):
-    total_entropy = entropy(data[target_name])
-    values, counts = np.unique(data[split_attribute], return_counts=True)
-    
-    weighted_entropy = sum((counts[i]/sum(counts)) * entropy(data[data[split_attribute] == values[i]][target_name]) 
-                           for i in range(len(values)))
-    
-    return total_entropy - weighted_entropy
+    # Try to use scikit-fuzzy if available, otherwise fall back to local functions.
+    try:
+        import skfuzzy as fuzz  # type: ignore
+        trimf = fuzz.trimf
+        interp_membership = fuzz.interp_membership
+    except Exception:
+        trimf = _trimf
+        interp_membership = _interp_membership
 
-# Step 3: ID3 Algorithm
-def id3(data, original_data, features, target_name="Play", parent_node_class=None):
-    if len(np.unique(data[target_name])) == 1:  # Pure node
-        return np.unique(data[target_name])[0]
-    
-    if len(data) == 0:  # No samples
-        return np.unique(original_data[target_name])[np.argmax(
-            np.unique(original_data[target_name], return_counts=True)[1])]
-    
-    if len(features) == 0:  # No features left
-        return parent_node_class
-    
-    parent_node_class = np.unique(data[target_name])[np.argmax(
-        np.unique(data[target_name], return_counts=True)[1])]
-    
-    gains = [info_gain(data, feature, target_name) for feature in features]
-    best_feature = features[np.argmax(gains)]
-    
-    tree = {best_feature: {}}
-    
-    for value in np.unique(data[best_feature]):
-        sub_data = data[data[best_feature] == value]
-        new_features = [f for f in features if f != best_feature]
-        
-        subtree = id3(sub_data, original_data, new_features, target_name, parent_node_class)
-        tree[best_feature][value] = subtree
-    
-    return tree
+    x_temp = np.arange(0, 41, 1)                 # universe: 0..40 °C
+    cold = trimf(x_temp, [0, 0, 20])
+    warm = trimf(x_temp, [10, 20, 30])
+    hot  = trimf(x_temp, [20, 40, 40])
 
-# Step 4: Sample Dataset (Weather Data)
-data = {
-    'Outlook': ['Sunny','Sunny','Overcast','Rain','Rain','Rain','Overcast','Sunny','Sunny','Rain','Sunny','Overcast','Overcast','Rain'],
-    'Temperature': ['Hot','Hot','Hot','Mild','Cool','Cool','Cool','Mild','Cool','Mild','Mild','Mild','Hot','Mild'],
-    'Humidity': ['High','High','High','High','Normal','Normal','Normal','High','Normal','Normal','Normal','High','Normal','High'],
-    'Wind': ['Weak','Strong','Weak','Weak','Weak','Strong','Strong','Weak','Weak','Weak','Strong','Strong','Weak','Strong'],
-    'Play': ['No','No','Yes','Yes','Yes','No','Yes','No','Yes','Yes','Yes','Yes','Yes','No']
-}
+    if sample_temps is None:
+        sample_temps = np.array([0, 5, 10, 15, 20, 25, 30, 35, 40])
 
-df = pd.DataFrame(data)
+    cold_m = np.array([interp_membership(x_temp, cold, t) for t in sample_temps])
+    warm_m = np.array([interp_membership(x_temp, warm, t) for t in sample_temps])
+    hot_m  = np.array([interp_membership(x_temp, hot, t)  for t in sample_temps])
 
-# Step 5: Train ID3 Tree
-features = ['Outlook', 'Temperature', 'Humidity', 'Wind']
-tree = id3(df, df, features)
+    # Print a tidy table
+    print("\n--- Fuzzy Logic Example (Temperature) ---")
+    print("Temp |  cold  |  warm  |   hot ")
+    print("--------------------------------")
+    for t, c, w, h in zip(sample_temps, cold_m, warm_m, hot_m):
+        print(f"{int(t):4d} | {c:6.3f} | {w:6.3f} | {h:6.3f}")
 
-# Output the tree
-print("Generated Decision Tree (ID3):")
-print(tree)
+    if plot:
+        plt.figure(figsize=(7, 3.5))
+        plt.plot(x_temp, cold, label="cold", lw=2)
+        plt.plot(x_temp, warm, label="warm", lw=2)
+        plt.plot(x_temp, hot,  label="hot",  lw=2)
+        plt.scatter(sample_temps, cold_m, c='C0', s=25, zorder=5)
+        plt.scatter(sample_temps, warm_m, c='C1', s=25, zorder=5)
+        plt.scatter(sample_temps, hot_m,  c='C2', s=25, zorder=5)
+        plt.xlabel("Temperature (°C)")
+        plt.ylabel("Membership degree")
+        plt.title("Temperature fuzzy sets")
+        plt.legend(loc="upper right")
+        plt.grid(alpha=0.25)
+        plt.tight_layout()
+        if save_plot:
+            plt.savefig(out_path, dpi=150)
+            print(f"Saved plot to: {out_path}")
+        plt.show()
+
+
+def run_nn_and_fuzzy(seed=1, plot=True, save_plot=False, out_path="temperature_fuzzy_sets.png", run_nn=True):
+    """
+    Run a small neural network demo (AND gate) and the fuzzy temperature demo.
+    Parameters control plotting, saving, seed, and whether to run the NN.
+    """
+    if run_nn:
+        try:
+            # Example: AND function with Neural Network
+            X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+            y = np.array([0, 0, 0, 1])  # AND output
+
+            # Use a deterministic solver for this tiny dataset and set random_state for reproducibility
+            nn = MLPClassifier(hidden_layer_sizes=(2,), max_iter=1000, learning_rate_init=0.1,
+                               solver='lbfgs', random_state=seed)
+            nn.fit(X, y)
+
+            preds = nn.predict(X)
+            print("\n--- Neural Network Example ---")
+            print("Predictions for AND gate:", preds)
+            print("Expected:", y)
+            print("Accuracy:", (preds == y).mean())
+        except Exception as e:
+            print("Neural network demo skipped (sklearn issue):", str(e))
+
+    # Run fuzzy demo (scikit-fuzzy optional)
+    fuzzy_temperature_demo(plot=plot, save_plot=save_plot, out_path=out_path)
+
+
+if __name__ == "__main__":
+    # Add a small CLI so the script is easier to run with different options
+    import argparse
+    parser = argparse.ArgumentParser(description="Run NN AND demo and fuzzy temperature demo.")
+    parser.add_argument("--no-plot", action="store_true", help="Do not show plots.")
+    parser.add_argument("--save-plot", action="store_true", help="Save fuzzy plot to disk.")
+    parser.add_argument("--out", default="temperature_fuzzy_sets.png", help="Output path for saved plot.")
+    parser.add_argument("--seed", type=int, default=1, help="Random seed / NN random_state.")
+    parser.add_argument("--skip-nn", action="store_true", help="Skip neural network demo.")
+    args = parser.parse_args()
+
+    run_nn_and_fuzzy(seed=args.seed, plot=not args.no_plot, save_plot=args.save_plot, out_path=args.out, run_nn=not args.skip_nn)
