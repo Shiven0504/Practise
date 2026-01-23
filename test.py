@@ -98,29 +98,31 @@ plt.tight_layout()
 plt.show()
 
 """
-# ...existing code...
-import argparse
-import sys
+
 import numpy as np
 import matplotlib.pyplot as plt
 
 from sklearn.neural_network import MLPClassifier
 
 
-def fuzzy_temperature_demo(sample_temps=None, plot=True, save_plot=False, out_path="temperature_fuzzy_sets.png", verbose=False):
+def fuzzy_temperature_demo(sample_temps=None, plot=True, save_plot=False, out_path="temperature_fuzzy_sets.png"):
     """
     Demonstrate temperature fuzzy sets (cold, warm, hot), print a table of memberships
     for sample temperatures and optionally plot the membership functions.
     """
+    # Provide minimal local implementations of triangular membership and interpolation
+    # so the demo runs even if scikit-fuzzy is not installed (and to avoid import errors in editors).
     def _trimf(x, abc):
         a, b, c = abc
         x = np.asarray(x, dtype=float)
         y = np.zeros_like(x, dtype=float)
+        # rising edge a..b
         if b != a:
             idx = (x >= a) & (x <= b)
             y[idx] = (x[idx] - a) / (b - a)
         else:
             y[x == a] = 1.0
+        # falling edge b..c
         if c != b:
             idx = (x >= b) & (x <= c)
             y[idx] = (c - x[idx]) / (c - b)
@@ -129,21 +131,19 @@ def fuzzy_temperature_demo(sample_temps=None, plot=True, save_plot=False, out_pa
         return np.clip(y, 0.0, 1.0)
 
     def _interp_membership(x, mf, value):
+        # linear interpolation to evaluate membership at a scalar value
         return float(np.interp(value, x, mf))
 
+    # Try to use scikit-fuzzy if available, otherwise fall back to local functions.
     try:
         import skfuzzy as fuzz  # type: ignore
         trimf = fuzz.trimf
         interp_membership = fuzz.interp_membership
-        if verbose:
-            print("Using scikit-fuzzy for membership calculations.")
     except Exception:
         trimf = _trimf
         interp_membership = _interp_membership
-        if verbose:
-            print("scikit-fuzzy not available; using fallback implementations.")
 
-    x_temp = np.arange(0, 41, 1)
+    x_temp = np.arange(0, 41, 1)                 # universe: 0..40 °C
     cold = trimf(x_temp, [0, 0, 20])
     warm = trimf(x_temp, [10, 20, 30])
     hot  = trimf(x_temp, [20, 40, 40])
@@ -155,6 +155,7 @@ def fuzzy_temperature_demo(sample_temps=None, plot=True, save_plot=False, out_pa
     warm_m = np.array([interp_membership(x_temp, warm, t) for t in sample_temps])
     hot_m  = np.array([interp_membership(x_temp, hot, t)  for t in sample_temps])
 
+    # Print a tidy table
     print("\n--- Fuzzy Logic Example (Temperature) ---")
     print("Temp |  cold  |  warm  |   hot ")
     print("--------------------------------")
@@ -181,41 +182,25 @@ def fuzzy_temperature_demo(sample_temps=None, plot=True, save_plot=False, out_pa
         plt.show()
 
 
-def run_nn_and_fuzzy(seed: int = 1, no_plot: bool = False, save_plot: str | None = None):
-    np.random.seed(seed)
-
-    # Neural network (AND function)
+def run_nn_and_fuzzy():
+    # Example: AND function with Neural Network
     X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
-    y = np.array([0, 0, 0, 1])
+    y = np.array([0, 0, 0, 1])  # AND output
 
-    try:
-        nn = MLPClassifier(hidden_layer_sizes=(2,), max_iter=1000, learning_rate_init=0.1,
-                           solver='lbfgs', random_state=seed)
-        nn.fit(X, y)
-    except Exception as e:
-        print("Error training MLPClassifier:", e)
-        return
+    # Use a deterministic solver for this tiny dataset and set random_state for reproducibility
+    nn = MLPClassifier(hidden_layer_sizes=(2,), max_iter=1000, learning_rate_init=0.1,
+                       solver='lbfgs', random_state=1)
+    nn.fit(X, y)
 
     preds = nn.predict(X)
     print("\n--- Neural Network Example ---")
     print("Predictions for AND gate:", preds)
     print("Expected:", y)
-    print("Accuracy:", float((preds == y).mean()))
+    print("Accuracy:", (preds == y).mean())
 
-    # Fuzzy demo
-    fuzzy_temperature_demo(plot=not no_plot, save_plot=bool(save_plot), out_path=save_plot or "temperature_fuzzy_sets.png")
+    # Run fuzzy demo (skfuzzy optional)
+    fuzzy_temperature_demo()
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run NN AND demo and fuzzy temperature demo.")
-    parser.add_argument("--seed", type=int, default=1, help="Random seed for reproducibility")
-    parser.add_argument("--no-plot", action="store_true", help="Do not show plots")
-    parser.add_argument("--save-plot", type=str, default=None, help="Save fuzzy plot to given path")
-    args = parser.parse_args()
-
-    try:
-        run_nn_and_fuzzy(seed=args.seed, no_plot=args.no_plot, save_plot=args.save_plot)
-    except KeyboardInterrupt:
-        print("Interrupted.", file=sys.stderr)
-        sys.exit(1)
-# ...existing code...
+    run_nn_and_fuzzy()
