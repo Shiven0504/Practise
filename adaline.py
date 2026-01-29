@@ -1,121 +1,98 @@
-# ...existing code...
-import argparse
-import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
-from sklearn.neural_network import MLPClassifier
+"""
+ADALINE training for AND function (batch updates).
+- Uses vectorized batch weight updates.
+- Stops based on MSE change (tolerance) or max_epochs.
+- Deterministic via fixed random seed.
+- Prints linear outputs and discrete predictions (threshold 0.5).
+"""
+
+def train_adaline(X, d, learning_rate=0.1, max_epochs=1000, tolerance=1e-6, seed=None, verbose=False):
+    """Train ADALINE using batch LMS. Returns (weights, mse_history, epoch_reached)."""
+    if seed is not None:
+        np.random.seed(seed)
+
+    # Add bias input (column of ones)
+    X_bias = np.hstack((np.ones((X.shape[0], 1)), X))
+
+    # Initialize weights randomly (bias + input dims)
+    weights = np.random.uniform(-0.5, 0.5, X_bias.shape[1])
+
+    prev_mse = np.inf
+    n_samples = X_bias.shape[0]
+    mse_history = []
+
+    for epoch in range(1, max_epochs + 1):
+        outputs = X_bias.dot(weights)          # shape (n_samples,)
+        errors = d - outputs                   # shape (n_samples,)
+
+        # Batch weight update (gradient descent / LMS)
+        weight_update = learning_rate * (X_bias.T.dot(errors)) / n_samples
+        weights += weight_update
+
+        mse = np.mean(errors ** 2)
+        mse_history.append(mse)
+
+        if verbose and epoch % 100 == 0:
+            print(f"Epoch {epoch:4d} MSE: {mse:.6e}")
+
+        # Check for convergence (based on MSE change)
+        if abs(prev_mse - mse) < tolerance:
+            if verbose:
+                print(f"Training converged in {epoch} epoch(s). MSE: {mse:.6e}")
+            return weights, mse_history, epoch
+
+        prev_mse = mse
+
+    if verbose:
+        print(f"Max epochs reached ({max_epochs}). Final MSE: {mse:.6e}")
+    return weights, mse_history, max_epochs
 
 
-def fuzzy_temperature_demo(sample_temps=None, plot=True, save_plot=False, out_path="temperature_fuzzy_sets.png", verbose=False):
-    """
-    Demonstrate temperature fuzzy sets (cold, warm, hot), print a table of memberships
-    for sample temperatures and optionally plot the membership functions.
-    """
-    def _trimf(x, abc):
-        a, b, c = abc
-        x = np.asarray(x, dtype=float)
-        y = np.zeros_like(x, dtype=float)
-        if b != a:
-            idx = (x >= a) & (x <= b)
-            y[idx] = (x[idx] - a) / (b - a)
-        else:
-            y[x == a] = 1.0
-        if c != b:
-            idx = (x >= b) & (x <= c)
-            y[idx] = (c - x[idx]) / (c - b)
-        else:
-            y[x == c] = 1.0
-        return np.clip(y, 0.0, 1.0)
-
-    def _interp_membership(x, mf, value):
-        return float(np.interp(value, x, mf))
-
-    try:
-        import skfuzzy as fuzz  # type: ignore
-        trimf = fuzz.trimf
-        interp_membership = fuzz.interp_membership
-        if verbose:
-            print("Using scikit-fuzzy for membership calculations.")
-    except Exception:
-        trimf = _trimf
-        interp_membership = _interp_membership
-        if verbose:
-            print("scikit-fuzzy not available; using fallback implementations.")
-
-    x_temp = np.arange(0, 41, 1)
-    cold = trimf(x_temp, [0, 0, 20])
-    warm = trimf(x_temp, [10, 20, 30])
-    hot  = trimf(x_temp, [20, 40, 40])
-
-    if sample_temps is None:
-        sample_temps = np.array([0, 5, 10, 15, 20, 25, 30, 35, 40])
-
-    cold_m = np.array([interp_membership(x_temp, cold, t) for t in sample_temps])
-    warm_m = np.array([interp_membership(x_temp, warm, t) for t in sample_temps])
-    hot_m  = np.array([interp_membership(x_temp, hot, t)  for t in sample_temps])
-
-    print("\n--- Fuzzy Logic Example (Temperature) ---")
-    print("Temp |  cold  |  warm  |   hot ")
-    print("--------------------------------")
-    for t, c, w, h in zip(sample_temps, cold_m, warm_m, hot_m):
-        print(f"{t:4d} | {c:6.3f} | {w:6.3f} | {h:6.3f}")
-
-    if plot:
-        plt.figure(figsize=(7, 3.5))
-        plt.plot(x_temp, cold, label="cold", lw=2)
-        plt.plot(x_temp, warm, label="warm", lw=2)
-        plt.plot(x_temp, hot,  label="hot",  lw=2)
-        plt.scatter(sample_temps, cold_m, c='C0', s=25, zorder=5)
-        plt.scatter(sample_temps, warm_m, c='C1', s=25, zorder=5)
-        plt.scatter(sample_temps, hot_m,  c='C2', s=25, zorder=5)
-        plt.xlabel("Temperature (°C)")
-        plt.ylabel("Membership degree")
-        plt.title("Temperature fuzzy sets")
-        plt.legend(loc="upper right")
-        plt.grid(alpha=0.25)
-        plt.tight_layout()
-        if save_plot:
-            plt.savefig(out_path, dpi=150)
-            print(f"Saved plot to: {out_path}")
-        plt.show()
-
-
-def run_nn_and_fuzzy(seed: int = 1, no_plot: bool = False, save_plot: str | None = None):
-    np.random.seed(seed)
-
-    # Neural network (AND function)
-    X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
-    y = np.array([0, 0, 0, 1])
-
-    try:
-        nn = MLPClassifier(hidden_layer_sizes=(2,), max_iter=1000, learning_rate_init=0.1,
-                           solver='lbfgs', random_state=seed)
-        nn.fit(X, y)
-    except Exception as e:
-        print("Error training MLPClassifier:", e)
-        return
-
-    preds = nn.predict(X)
-    print("\n--- Neural Network Example ---")
-    print("Predictions for AND gate:", preds)
-    print("Expected:", y)
-    print("Accuracy:", float((preds == y).mean()))
-
-    # Fuzzy demo
-    fuzzy_temperature_demo(plot=not no_plot, save_plot=bool(save_plot), out_path=save_plot or "temperature_fuzzy_sets.png")
+def predict_adaline(weights, X):
+    """Return linear outputs and binary predictions (threshold 0.5) for inputs X."""
+    X_bias = np.hstack((np.ones((X.shape[0], 1)), X))
+    linear_outputs = X_bias.dot(weights)
+    predictions = (linear_outputs >= 0.5).astype(int)
+    return linear_outputs, predictions
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run NN AND demo and fuzzy temperature demo.")
-    parser.add_argument("--seed", type=int, default=1, help="Random seed for reproducibility")
-    parser.add_argument("--no-plot", action="store_true", help="Do not show plots")
-    parser.add_argument("--save-plot", type=str, default=None, help="Save fuzzy plot to given path")
-    args = parser.parse_args()
+    np.random.seed(42)
 
-    try:
-        run_nn_and_fuzzy(seed=args.seed, no_plot=args.no_plot, save_plot=args.save_plot)
-    except KeyboardInterrupt:
-        print("Interrupted.", file=sys.stderr)
-        sys.exit(1)
-# ...existing code...
+    # Input samples (AND function, 2 inputs)
+    X = np.array([
+        [0, 0],
+        [0, 1],
+        [1, 0],
+        [1, 1]
+    ])
+
+    # Desired outputs
+    d = np.array([0, 0, 0, 1])
+
+    # Train
+    weights, mse_history, epoch_reached = train_adaline(X, d, learning_rate=0.1,
+                                                       max_epochs=1000, tolerance=1e-6,
+                                                       seed=42, verbose=True)
+
+    print("\nFinal weights (including bias):")
+    print(weights)
+
+    # Test the trained ADALINE (linear outputs and discrete predictions)
+    linear_outputs, preds = predict_adaline(weights, X)
+    print("\nTesting on inputs:")
+    for xi, target, lin, p in zip(X, d, linear_outputs, preds):
+        print(f"Input: {xi}, Target: {target}, Linear: {lin:.4f}, Predicted: {p}")
+
+    # Optional: plot MSE history
+    plt.figure(figsize=(6,3))
+    plt.plot(mse_history, lw=1.5)
+    plt.xlabel("Epoch")
+    plt.ylabel("MSE")
+    plt.title("ADALINE training MSE")
+    plt.grid(alpha=0.25)
+    plt.tight_layout()
+    plt.show()
