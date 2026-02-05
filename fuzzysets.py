@@ -79,30 +79,7 @@ print("R1 o R2:\n", R_comp)
 
 
 def specific_rotation(alpha: float, l_cm: float, weight_g: float, volume_ml: float) -> float:
-    """
-    Calculate specific rotation [α] of a solution.
-
-    Parameters
-    ----------
-    alpha : float
-        Observed rotation in degrees.
-    l_cm : float
-        Polarimeter tube length in centimeters.
-    weight_g : float
-        Mass of solute (grams) dissolved in the solution.
-    volume_ml : float
-        Volume of the prepared solution in millilitres.
-
-    Returns
-    -------
-    float
-        Specific rotation [α] in degrees · dm⁻¹ · (g/100mL)⁻¹
-
-    Raises
-    ------
-    ValueError
-        If l_cm <= 0, volume_ml <= 0, or weight_g < 0.
-    """
+    
     # Basic validation
     if l_cm <= 0:
         raise ValueError("Tube length (l_cm) must be > 0 cm")
