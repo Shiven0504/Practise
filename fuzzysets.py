@@ -77,58 +77,75 @@ print("R1 o R2:\n", R_comp)
 
 """
 
+# ...existing code...
+import numpy as np
 
-def specific_rotation(alpha: float, l_cm: float, weight_g: float, volume_ml: float) -> float:
-    
-    # Basic validation
-    if l_cm <= 0:
-        raise ValueError("Tube length (l_cm) must be > 0 cm")
-    if volume_ml <= 0:
-        raise ValueError("Volume (volume_ml) must be > 0 mL")
-    if weight_g < 0:
-        raise ValueError("Weight (weight_g) must be >= 0 g")
+A1 = np.array([-1,  1, -1,  1])
+A2 = np.array([ 1,  1,  1, -1])
+A3 = np.array([-1, -1, -1,  1])
+stored_patterns = [A1, A2, A3]
+pattern_names = ["A1", "A2", "A3"]
 
-    # Convert path length to dm
-    l_dm = l_cm / 10.0
+W = np.zeros((4, 4))
+for A in stored_patterns:
+    W += np.outer(A, A)
 
-    # Concentration in g per 100 mL
-    p = (weight_g / volume_ml) * 100.0
+np.fill_diagonal(W, 0)
 
-    if p == 0:
-        raise ValueError("Concentration is zero (no solute); specific rotation undefined")
+print("Weight Matrix (W):")
+print(W)
 
-    # Formula: [α] = 100 * α / (l * p)
-    specific_alpha = (100.0 * alpha) / (l_dm * p)
-    return specific_alpha
 
+def activation(x):
+    """Bipolar step activation function."""
+    return np.where(x >= 0, 1, -1)
+
+
+def recall(pattern, W, activation_fn, max_steps=10):
+    """
+    Synchronous iterative recall: apply activation(np.dot(state, W)) until convergence
+    or max_steps reached. Returns (final_state, steps_taken, converged_bool).
+    """
+    state = pattern.copy()
+    for step in range(1, max_steps + 1):
+        new_state = activation_fn(np.dot(state, W))
+        if np.array_equal(new_state, state):
+            return new_state, step, True
+        state = new_state
+    return state, max_steps, False
+
+
+def match_stored(state, stored, names=None):
+    """Return name/index of matching stored pattern or (None, -1) if no match."""
+    for i, p in enumerate(stored):
+        if np.array_equal(state, p):
+            return (names[i] if names else i, i)
+    return (None, -1)
+
+
+# test patterns
+Ax = np.array([-1,  1, -1,  1])
+Ay = np.array([ 1,  1,  1,  1])
+Az = np.array([-1, -1, -1, -1])
+test_patterns = [Ax, Ay, Az]
+test_names = ["Ax", "Ay", "Az"]
 
 if __name__ == "__main__":
-    # Improved CLI-driven example + nicer output formatting
-    import argparse
-    import sys
+    print("\n--- Testing Network Recall (iterative) ---")
+    for name, pattern in zip(test_names, test_patterns):
+        print(f"\nTesting with pattern: {name}")
+        print("Input:")
+        print(pattern)
 
-    parser = argparse.ArgumentParser(
-        prog="specific_rotation",
-        description="Compute specific rotation [α] for a solution (° · dm⁻¹ · (g/100mL)⁻¹)."
-    )
-    parser.add_argument("--alpha", type=float, default=13.2, help="Observed rotation in degrees (default: 13.2)")
-    parser.add_argument("--length-cm", type=float, dest="l_cm", default=20.0, help="Tube length in cm (default: 20.0)")
-    parser.add_argument("--weight-g", type=float, dest="weight_g", default=2.0, help="Mass of solute in g (default: 2.0)")
-    parser.add_argument("--volume-ml", type=float, dest="volume_ml", default=100.0, help="Volume of solution in mL (default: 100.0)")
-    args = parser.parse_args()
+        final, steps, converged = recall(pattern, W, activation, max_steps=20)
 
-    try:
-        result = specific_rotation(args.alpha, args.l_cm, args.weight_g, args.volume_ml)
-    except ValueError as exc:
-        print("Error:", exc, file=sys.stderr)
-        sys.exit(1)
-    else:
-        conc = (args.weight_g / args.volume_ml) * 100.0
-        print("Specific Rotation Calculation")
-        print("-----------------------------")
-        print(f"Observed rotation (α): {args.alpha:.3f} °")
-        print(f"Tube length (l):      {args.l_cm:.2f} cm")
-        print(f"Mass of solute:       {args.weight_g:.3f} g")
-        print(f"Volume of solution:    {args.volume_ml:.2f} mL")
-        print(f"Concentration (p):    {conc:.3f} g/100mL")
-        print(f"\nSpecific Rotation [α]: {result:.6f} ° · dm⁻¹ · (g/100mL)⁻¹")
+        print(f"Output after {steps} step(s):")
+        print(final)
+        if converged:
+            match_name, idx = match_stored(final, stored_patterns, pattern_names)
+            if match_name is not None:
+                print(f"Result: Converged to stored pattern {match_name} (index {idx})")
+            else:
+                print("Result: Converged to a pattern but not one of the stored patterns")
+        else:
+            print("Result: Did not converge within max steps")
