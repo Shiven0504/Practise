@@ -1,75 +1,121 @@
 # ...existing code...
+import argparse
+import sys
 import numpy as np
+import matplotlib.pyplot as plt
 
-A1 = np.array([-1,  1, -1,  1])
-A2 = np.array([ 1,  1,  1, -1])
-A3 = np.array([-1, -1, -1,  1])
-stored_patterns = [A1, A2, A3]
-pattern_names = ["A1", "A2", "A3"]
-
-W = np.zeros((4, 4))
-for A in stored_patterns:
-    W += np.outer(A, A)
-
-np.fill_diagonal(W, 0)
-
-print("Weight Matrix (W):")
-print(W)
+from sklearn.neural_network import MLPClassifier
 
 
-def activation(x):
-    """Bipolar step activation function."""
-    return np.where(x >= 0, 1, -1)
-
-
-def recall(pattern, W, activation_fn, max_steps=10):
+def fuzzy_temperature_demo(sample_temps=None, plot=True, save_plot=False, out_path="temperature_fuzzy_sets.png", verbose=False):
     """
-    Synchronous iterative recall: apply activation(np.dot(state, W)) until convergence
-    or max_steps reached. Returns (final_state, steps_taken, converged_bool).
+    Demonstrate temperature fuzzy sets (cold, warm, hot), print a table of memberships
+    for sample temperatures and optionally plot the membership functions.
     """
-    state = pattern.copy()
-    for step in range(1, max_steps + 1):
-        new_state = activation_fn(np.dot(state, W))
-        if np.array_equal(new_state, state):
-            return new_state, step, True
-        state = new_state
-    return state, max_steps, False
+    def _trimf(x, abc):
+        a, b, c = abc
+        x = np.asarray(x, dtype=float)
+        y = np.zeros_like(x, dtype=float)
+        if b != a:
+            idx = (x >= a) & (x <= b)
+            y[idx] = (x[idx] - a) / (b - a)
+        else:
+            y[x == a] = 1.0
+        if c != b:
+            idx = (x >= b) & (x <= c)
+            y[idx] = (c - x[idx]) / (c - b)
+        else:
+            y[x == c] = 1.0
+        return np.clip(y, 0.0, 1.0)
+
+    def _interp_membership(x, mf, value):
+        return float(np.interp(value, x, mf))
+
+    try:
+        import skfuzzy as fuzz  # type: ignore
+        trimf = fuzz.trimf
+        interp_membership = fuzz.interp_membership
+        if verbose:
+            print("Using scikit-fuzzy for membership calculations.")
+    except Exception:
+        trimf = _trimf
+        interp_membership = _interp_membership
+        if verbose:
+            print("scikit-fuzzy not available; using fallback implementations.")
+
+    x_temp = np.arange(0, 41, 1)
+    cold = trimf(x_temp, [0, 0, 20])
+    warm = trimf(x_temp, [10, 20, 30])
+    hot  = trimf(x_temp, [20, 40, 40])
+
+    if sample_temps is None:
+        sample_temps = np.array([0, 5, 10, 15, 20, 25, 30, 35, 40])
+
+    cold_m = np.array([interp_membership(x_temp, cold, t) for t in sample_temps])
+    warm_m = np.array([interp_membership(x_temp, warm, t) for t in sample_temps])
+    hot_m  = np.array([interp_membership(x_temp, hot, t)  for t in sample_temps])
+
+    print("\n--- Fuzzy Logic Example (Temperature) ---")
+    print("Temp |  cold  |  warm  |   hot ")
+    print("--------------------------------")
+    for t, c, w, h in zip(sample_temps, cold_m, warm_m, hot_m):
+        print(f"{t:4d} | {c:6.3f} | {w:6.3f} | {h:6.3f}")
+
+    if plot:
+        plt.figure(figsize=(7, 3.5))
+        plt.plot(x_temp, cold, label="cold", lw=2)
+        plt.plot(x_temp, warm, label="warm", lw=2)
+        plt.plot(x_temp, hot,  label="hot",  lw=2)
+        plt.scatter(sample_temps, cold_m, c='C0', s=25, zorder=5)
+        plt.scatter(sample_temps, warm_m, c='C1', s=25, zorder=5)
+        plt.scatter(sample_temps, hot_m,  c='C2', s=25, zorder=5)
+        plt.xlabel("Temperature (°C)")
+        plt.ylabel("Membership degree")
+        plt.title("Temperature fuzzy sets")
+        plt.legend(loc="upper right")
+        plt.grid(alpha=0.25)
+        plt.tight_layout()
+        if save_plot:
+            plt.savefig(out_path, dpi=150)
+            print(f"Saved plot to: {out_path}")
+        plt.show()
 
 
-def match_stored(state, stored, names=None):
-    """Return name/index of matching stored pattern or (None, -1) if no match."""
-    for i, p in enumerate(stored):
-        if np.array_equal(state, p):
-            return (names[i] if names else i, i)
-    return (None, -1)
+def run_nn_and_fuzzy(seed: int = 1, no_plot: bool = False, save_plot: str | None = None):
+    np.random.seed(seed)
 
+    # Neural network (AND function)
+    X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+    y = np.array([0, 0, 0, 1])
 
-# test patterns
-Ax = np.array([-1,  1, -1,  1])
-Ay = np.array([ 1,  1,  1,  1])
-Az = np.array([-1, -1, -1, -1])
-test_patterns = [Ax, Ay, Az]
-test_names = ["Ax", "Ay", "Az"]
+    try:
+        nn = MLPClassifier(hidden_layer_sizes=(2,), max_iter=1000, learning_rate_init=0.1,
+                           solver='lbfgs', random_state=seed)
+        nn.fit(X, y)
+    except Exception as e:
+        print("Error training MLPClassifier:", e)
+        return
+
+    preds = nn.predict(X)
+    print("\n--- Neural Network Example ---")
+    print("Predictions for AND gate:", preds)
+    print("Expected:", y)
+    print("Accuracy:", float((preds == y).mean()))
+
+    # Fuzzy demo
+    fuzzy_temperature_demo(plot=not no_plot, save_plot=bool(save_plot), out_path=save_plot or "temperature_fuzzy_sets.png")
+
 
 if __name__ == "__main__":
-    print("\n--- Testing Network Recall (iterative) ---")
-    for name, pattern in zip(test_names, test_patterns):
-        print(f"\nTesting with pattern: {name}")
-        print("Input:")
-        print(pattern)
+    parser = argparse.ArgumentParser(description="Run NN AND demo and fuzzy temperature demo.")
+    parser.add_argument("--seed", type=int, default=1, help="Random seed for reproducibility")
+    parser.add_argument("--no-plot", action="store_true", help="Do not show plots")
+    parser.add_argument("--save-plot", type=str, default=None, help="Save fuzzy plot to given path")
+    args = parser.parse_args()
 
-        final, steps, converged = recall(pattern, W, activation, max_steps=20)
-
-        print(f"Output after {steps} step(s):")
-        print(final)
-        if converged:
-            match_name, idx = match_stored(final, stored_patterns, pattern_names)
-            if match_name is not None:
-                print(f"Result: Converged to stored pattern {match_name} (index {idx})")
-            else:
-                print("Result: Converged to a pattern but not one of the stored patterns")
-        else:
-            print("Result: Did not converge within max steps")
-
-
-
+    try:
+        run_nn_and_fuzzy(seed=args.seed, no_plot=args.no_plot, save_plot=args.save_plot)
+    except KeyboardInterrupt:
+        print("Interrupted.", file=sys.stderr)
+        sys.exit(1)
+# ...existing code...
