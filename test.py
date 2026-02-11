@@ -98,27 +98,21 @@ plt.tight_layout()
 plt.show()
 
 """
-# ...existing code...
-import argparse
+
 import numpy as np
 import matplotlib.pyplot as plt
-from typing import Optional, Sequence, Dict, Any
 
 from sklearn.neural_network import MLPClassifier
 
 
-def fuzzy_temperature_demo(
-    sample_temps: Optional[Sequence[int]] = None,
-    plot: bool = True,
-    save_plot: bool = False,
-    out_path: str = "temperature_fuzzy_sets.png",
-) -> Dict[str, Any]:
+def fuzzy_temperature_demo(sample_temps=None, plot=True, save_plot=False, out_path="temperature_fuzzy_sets.png"):
     """
     Demonstrate temperature fuzzy sets (cold, warm, hot), print a table of memberships
     for sample temperatures and optionally plot the membership functions.
-    Returns the membership arrays and x axis for further use.
     """
-    def _trimf(x: np.ndarray, abc: Sequence[float]) -> np.ndarray:
+    # Provide minimal local implementations of triangular membership and interpolation
+    # so the demo runs even if scikit-fuzzy is not installed (and to avoid import errors in editors).
+    def _trimf(x, abc):
         a, b, c = abc
         x = np.asarray(x, dtype=float)
         y = np.zeros_like(x, dtype=float)
@@ -136,10 +130,11 @@ def fuzzy_temperature_demo(
             y[x == c] = 1.0
         return np.clip(y, 0.0, 1.0)
 
-    def _interp_membership(x: np.ndarray, mf: np.ndarray, value: float) -> float:
+    def _interp_membership(x, mf, value):
+        # linear interpolation to evaluate membership at a scalar value
         return float(np.interp(value, x, mf))
 
-    # prefer scikit-fuzzy if available
+    # Try to use scikit-fuzzy if available, otherwise fall back to local functions.
     try:
         import skfuzzy as fuzz  # type: ignore
         trimf = fuzz.trimf
@@ -148,33 +143,33 @@ def fuzzy_temperature_demo(
         trimf = _trimf
         interp_membership = _interp_membership
 
-    x_temp = np.arange(0, 41, 1)  # universe: 0..40 °C
+    x_temp = np.arange(0, 41, 1)                 # universe: 0..40 °C
     cold = trimf(x_temp, [0, 0, 20])
     warm = trimf(x_temp, [10, 20, 30])
-    hot = trimf(x_temp, [20, 40, 40])
+    hot  = trimf(x_temp, [20, 40, 40])
 
     if sample_temps is None:
         sample_temps = np.array([0, 5, 10, 15, 20, 25, 30, 35, 40])
 
-    cold_m = np.array([interp_membership(x_temp, cold, float(t)) for t in sample_temps])
-    warm_m = np.array([interp_membership(x_temp, warm, float(t)) for t in sample_temps])
-    hot_m = np.array([interp_membership(x_temp, hot, float(t)) for t in sample_temps])
+    cold_m = np.array([interp_membership(x_temp, cold, t) for t in sample_temps])
+    warm_m = np.array([interp_membership(x_temp, warm, t) for t in sample_temps])
+    hot_m  = np.array([interp_membership(x_temp, hot, t)  for t in sample_temps])
 
     # Print a tidy table
     print("\n--- Fuzzy Logic Example (Temperature) ---")
     print("Temp |  cold  |  warm  |   hot ")
     print("--------------------------------")
     for t, c, w, h in zip(sample_temps, cold_m, warm_m, hot_m):
-        print(f"{int(t):4d} | {c:6.3f} | {w:6.3f} | {h:6.3f}")
+        print(f"{t:4d} | {c:6.3f} | {w:6.3f} | {h:6.3f}")
 
     if plot:
         plt.figure(figsize=(7, 3.5))
         plt.plot(x_temp, cold, label="cold", lw=2)
         plt.plot(x_temp, warm, label="warm", lw=2)
-        plt.plot(x_temp, hot, label="hot", lw=2)
-        plt.scatter(sample_temps, cold_m, c="C0", s=25, zorder=5)
-        plt.scatter(sample_temps, warm_m, c="C1", s=25, zorder=5)
-        plt.scatter(sample_temps, hot_m, c="C2", s=25, zorder=5)
+        plt.plot(x_temp, hot,  label="hot",  lw=2)
+        plt.scatter(sample_temps, cold_m, c='C0', s=25, zorder=5)
+        plt.scatter(sample_temps, warm_m, c='C1', s=25, zorder=5)
+        plt.scatter(sample_temps, hot_m,  c='C2', s=25, zorder=5)
         plt.xlabel("Temperature (°C)")
         plt.ylabel("Membership degree")
         plt.title("Temperature fuzzy sets")
@@ -186,44 +181,30 @@ def fuzzy_temperature_demo(
             print(f"Saved plot to: {out_path}")
         plt.show()
 
-    return {
-        "x": x_temp,
-        "cold": cold,
-        "warm": warm,
-        "hot": hot,
-        "sample_temps": np.asarray(sample_temps),
-        "cold_m": cold_m,
-        "warm_m": warm_m,
-        "hot_m": hot_m,
-    }
 
-
-def run_nn_and_fuzzy(plot: bool = True, save_plot: bool = False, out_path: str = "temperature_fuzzy_sets.png") -> Dict[str, Any]:
-    """
-    Train a tiny NN to learn the AND function and run the fuzzy temperature demo.
-    Returns a dict with predictions and fuzzy results.
-    """
+def run_nn_and_fuzzy():
+    # Example: AND function with Neural Network
     X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
     y = np.array([0, 0, 0, 1])  # AND output
 
-    # lbfgs ignores learning_rate_init; removed to avoid warnings
-    nn = MLPClassifier(hidden_layer_sizes=(2,), max_iter=1000, solver="lbfgs", random_state=1)
+    # Use a deterministic solver for this tiny dataset and set random_state for reproducibility
+    nn = MLPClassifier(hidden_layer_sizes=(2,), max_iter=1000, learning_rate_init=0.1,
+                       solver='lbfgs', random_state=1)
     nn.fit(X, y)
 
     preds = nn.predict(X)
-    acc = float((preds == y).mean())
-
     print("\n--- Neural Network Example ---")
     print("Predictions for AND gate:", preds)
     print("Expected:", y)
-    print("Accuracy:", acc)
+    print("Accuracy:", (preds == y).mean())
 
-    fuzzy_res = fuzzy_temperature_demo(plot=plot, save_plot=save_plot, out_path=out_path)
+    # Run fuzzy demo (skfuzzy optional)
+    fuzzy_temperature_demo()
 
-    return {"preds": preds, "accuracy": acc, "fuzzy": fuzzy_res}
+
+if __name__ == "__main__":
+    run_nn_and_fuzzy()
 
 
-def main():
-    p = argparse.ArgumentParser(description="Run NN AND example and fuzzy temperature demo.")
-    p.add_argument("--no-plot", action="store_true", help="Do not show plots (useful for headless environments).")
-    p.add_argument("--
+
+    
