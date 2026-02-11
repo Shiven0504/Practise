@@ -77,58 +77,54 @@ print("R1 o R2:\n", R_comp)
 
 """
 
+// ...existing code...
+# --- 2) Fuzzy Logic (using scikit-fuzzy) ---
+def fuzzy_temperature_demo(sample_temps=None, plot=True, save_plot=False, out_path="temperature_fuzzy_sets.png"):
+    """
+    Demonstrate temperature fuzzy sets (cold, warm, hot), print a table of memberships
+    for sample temperatures and optionally plot the membership functions.
+    """
+    import skfuzzy as fuzz
+    import numpy as np
+    import matplotlib.pyplot as plt
 
-def specific_rotation(alpha: float, l_cm: float, weight_g: float, volume_ml: float) -> float:
-    
-    # Basic validation
-    if l_cm <= 0:
-        raise ValueError("Tube length (l_cm) must be > 0 cm")
-    if volume_ml <= 0:
-        raise ValueError("Volume (volume_ml) must be > 0 mL")
-    if weight_g < 0:
-        raise ValueError("Weight (weight_g) must be >= 0 g")
+    x_temp = np.arange(0, 41, 1)                 # universe: 0..40 °C
+    cold = fuzz.trimf(x_temp, [0, 0, 20])
+    warm = fuzz.trimf(x_temp, [10, 20, 30])
+    hot  = fuzz.trimf(x_temp, [20, 40, 40])
 
-    # Convert path length to dm
-    l_dm = l_cm / 10.0
+    if sample_temps is None:
+        sample_temps = np.array([0, 5, 10, 15, 20, 25, 30, 35, 40])
 
-    # Concentration in g per 100 mL
-    p = (weight_g / volume_ml) * 100.0
+    cold_m = np.array([fuzz.interp_membership(x_temp, cold, t) for t in sample_temps])
+    warm_m = np.array([fuzz.interp_membership(x_temp, warm, t) for t in sample_temps])
+    hot_m  = np.array([fuzz.interp_membership(x_temp, hot, t)  for t in sample_temps])
 
-    if p == 0:
-        raise ValueError("Concentration is zero (no solute); specific rotation undefined")
+    # Print a tidy table
+    print("\n--- Fuzzy Logic Example (Temperature) ---")
+    print("Temp |  cold  |  warm  |   hot ")
+    print("--------------------------------")
+    for t, c, w, h in zip(sample_temps, cold_m, warm_m, hot_m):
+        print(f"{t:4d} | {c:6.3f} | {w:6.3f} | {h:6.3f}")
 
-    # Formula: [α] = 100 * α / (l * p)
-    specific_alpha = (100.0 * alpha) / (l_dm * p)
-    return specific_alpha
+    if plot:
+        plt.figure(figsize=(7, 3.5))
+        plt.plot(x_temp, cold, label="cold", lw=2)
+        plt.plot(x_temp, warm, label="warm", lw=2)
+        plt.plot(x_temp, hot,  label="hot",  lw=2)
+        plt.scatter(sample_temps, cold_m, c='C0', s=25, label=None, zorder=5)
+        plt.scatter(sample_temps, warm_m, c='C1', s=25, label=None, zorder=5)
+        plt.scatter(sample_temps, hot_m,  c='C2', s=25, label=None, zorder=5)
+        plt.xlabel("Temperature (°C)")
+        plt.ylabel("Membership degree")
+        plt.title("Temperature fuzzy sets")
+        plt.legend(loc="upper right")
+        plt.grid(alpha=0.25)
+        plt.tight_layout()
+        if save_plot:
+            plt.savefig(out_path, dpi=150)
+            print(f"Saved plot to: {out_path}")
+        plt.show()
 
-
-if __name__ == "__main__":
-    # Improved CLI-driven example + nicer output formatting
-    import argparse
-    import sys
-
-    parser = argparse.ArgumentParser(
-        prog="specific_rotation",
-        description="Compute specific rotation [α] for a solution (° · dm⁻¹ · (g/100mL)⁻¹)."
-    )
-    parser.add_argument("--alpha", type=float, default=13.2, help="Observed rotation in degrees (default: 13.2)")
-    parser.add_argument("--length-cm", type=float, dest="l_cm", default=20.0, help="Tube length in cm (default: 20.0)")
-    parser.add_argument("--weight-g", type=float, dest="weight_g", default=2.0, help="Mass of solute in g (default: 2.0)")
-    parser.add_argument("--volume-ml", type=float, dest="volume_ml", default=100.0, help="Volume of solution in mL (default: 100.0)")
-    args = parser.parse_args()
-
-    try:
-        result = specific_rotation(args.alpha, args.l_cm, args.weight_g, args.volume_ml)
-    except ValueError as exc:
-        print("Error:", exc, file=sys.stderr)
-        sys.exit(1)
-    else:
-        conc = (args.weight_g / args.volume_ml) * 100.0
-        print("Specific Rotation Calculation")
-        print("-----------------------------")
-        print(f"Observed rotation (α): {args.alpha:.3f} °")
-        print(f"Tube length (l):      {args.l_cm:.2f} cm")
-        print(f"Mass of solute:       {args.weight_g:.3f} g")
-        print(f"Volume of solution:    {args.volume_ml:.2f} mL")
-        print(f"Concentration (p):    {conc:.3f} g/100mL")
-        print(f"\nSpecific Rotation [α]: {result:.6f} ° · dm⁻¹ · (g/100mL)⁻¹")
+# Call demo with defaults
+fuzzy_temperature_demo()
