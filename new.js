@@ -1,6 +1,3 @@
-// PCA implementation using covariance + power iteration for eigenpairs.
-// Exports: pca(data, k, opts) -> { components, explainedVariance, mean, projected, eigenvalues }
-
 function meanVector(data) {
     const n = data.length;
     const m = data[0].length;
@@ -174,24 +171,3 @@ function pca(data, k = null, opts = {}) {
 
 module.exports = { pca };
 
-// Example usage (uncomment to run):
-/*
-const X = [
-    [2.5, 2.4],
-    [0.5, 0.7],
-    [2.2, 2.9],
-    [1.9, 2.2],
-    [3.1, 3.0],
-    [2.3, 2.7],
-    [2, 1.6],
-    [1, 1.1],
-    [1.5, 1.6],
-    [1.1, 0.9],
-];
-
-const res = pca(X, 2);
-console.log('Components:', res.components);
-console.log('Eigenvalues:', res.eigenvalues);
-console.log('Explained variance:', res.explainedVariance);
-console.log('Projected (first 3):', res.projected.slice(0,3));
-*/
