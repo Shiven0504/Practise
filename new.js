@@ -1,412 +1,197 @@
+// PCA implementation using covariance + power iteration for eigenpairs.
+// Exports: pca(data, k, opts) -> { components, explainedVariance, mean, projected, eigenvalues }
 
-class StudentNode {
-    constructor(data) {
-        this.data = data;
-        this.next = null;
+function meanVector(data) {
+    const n = data.length;
+    const m = data[0].length;
+    const mean = new Array(m).fill(0);
+    for (let i = 0; i < n; i++) {
+        for (let j = 0; j < m; j++) mean[j] += data[i][j];
+    }
+    for (let j = 0; j < m; j++) mean[j] /= n;
+    return mean;
+}
+
+function centerData(data, mean) {
+    return data.map(row => row.map((v, j) => v - mean[j]));
+}
+
+function transpose(A) {
+    const m = A.length, n = A[0].length;
+    const T = Array.from({ length: n }, () => new Array(m));
+    for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) T[j][i] = A[i][j];
+    return T;
+}
+
+function matMul(A, B) {
+    const m = A.length, p = B[0].length, n = B.length;
+    const C = Array.from({ length: m }, () => new Array(p).fill(0));
+    for (let i = 0; i < m; i++) {
+        for (let k = 0; k < n; k++) {
+            const aik = A[i][k];
+            for (let j = 0; j < p; j++) C[i][j] += aik * B[k][j];
+        }
+    }
+    return C;
+}
+
+function covMatrix(centered) {
+    const n = centered.length;
+    const Xt = transpose(centered);
+    const C = matMul(Xt, centered);
+    const scale = 1 / (n - 1);
+    for (let i = 0; i < C.length; i++) for (let j = 0; j < C.length; j++) C[i][j] *= scale;
+    return C;
+}
+
+function dot(a, b) {
+    let s = 0;
+    for (let i = 0; i < a.length; i++) s += a[i] * b[i];
+    return s;
+}
+
+function norm(a) {
+    return Math.sqrt(dot(a, a));
+}
+
+function scalarVecMul(a, s) {
+    return a.map(x => x * s);
+}
+
+function matVecMul(M, v) {
+    const out = new Array(M.length).fill(0);
+    for (let i = 0; i < M.length; i++) {
+        let s = 0;
+        const row = M[i];
+        for (let j = 0; j < row.length; j++) s += row[j] * v[j];
+        out[i] = s;
+    }
+    return out;
+}
+
+function outer(v) {
+    const m = v.length;
+    const M = Array.from({ length: m }, () => new Array(m));
+    for (let i = 0; i < m; i++) for (let j = 0; j < m; j++) M[i][j] = v[i] * v[j];
+    return M;
+}
+
+function subtractScaledOuter(M, scale, v) {
+    // M = M - scale * (v v^T)
+    for (let i = 0; i < M.length; i++) {
+        for (let j = 0; j < M.length; j++) {
+            M[i][j] -= scale * v[i] * v[j];
+        }
     }
 }
 
-class LinkedList {
-    constructor() {
-        this.head = null;
-        this._size = 0;
-    }
+function powerIteration(M, opts = {}) {
+    const maxIter = opts.maxIter || 1000;
+    const tol = opts.tol || 1e-9;
+    const n = M.length;
+    let b = new Array(n);
+    for (let i = 0; i < n; i++) b[i] = Math.random() - 0.5;
+    let bNorm = norm(b);
+    if (bNorm === 0) b[0] = 1, bNorm = 1;
+    b = scalarVecMul(b, 1 / bNorm);
 
-    size() {
-        return this._size;
-    }
-
-    isEmpty() {
-        return this._size === 0;
-    }
-
-    insertAt(position, data) {
-        if (position < 0) {
-            console.error("Invalid position");
-            return false;
+    let lambda = 0;
+    for (let iter = 0; iter < maxIter; iter++) {
+        const Mb = matVecMul(M, b);
+        const MbNorm = norm(Mb);
+        if (MbNorm === 0) break;
+        const bNext = scalarVecMul(Mb, 1 / MbNorm);
+        const lambdaNext = dot(bNext, matVecMul(M, bNext));
+        if (Math.abs(lambdaNext - lambda) < tol) {
+            b = bNext;
+            lambda = lambdaNext;
+            break;
         }
-
-        const newNode = new StudentNode(data);
-
-        if (position === 0) {
-            newNode.next = this.head;
-            this.head = newNode;
-            this._size++;
-            return true;
-        }
-
-        let prev = null;
-        let current = this.head;
-        let index = 0;
-
-        while (current && index < position) {
-            prev = current;
-            current = current.next;
-            index++;
-        }
-
-        if (index !== position) {
-            console.error("Position out of bounds");
-            return false;
-        }
-
-        prev.next = newNode;
-
-class StudentNode {
-    constructor(data) {
-        this.data = data;
-        this.next = null;
+        b = bNext;
+        lambda = lambdaNext;
     }
+    return { eigenvector: b, eigenvalue: lambda };
 }
 
-class LinkedList {
-    constructor() {
-        this.head = null;
-        this._size = 0;
-    }
-
-    size() {
-        return this._size;
-    }
-
-    isEmpty() {
-        return this._size === 0;
-    }
-
-    insertAt(position, data) {
-        if (position < 0) {
-            console.error("Invalid position");
-            return false;
-        }
-
-        const newNode = new StudentNode(data);
-
-        if (position === 0) {
-            newNode.next = this.head;
-            this.head = newNode;
-            this._size++;
-            return true;
-        }
-
-        let prev = null;
-        let current = this.head;
-        let index = 0;
-
-        while (current && index < position) {
-            prev = current;
-            current = current.next;
-            index++;
-        }
-
-        if (index !== position) {
-            console.error("Position out of bounds");
-            return false;
-        }
-
-        prev.next = newNode;
-        newNode.next = current;
-        this._size++;
-        return true;
-    }
-
-    insertEnd(data) {
-        return this.insertAt(this._size, data);
-    }
-
-    getAt(index) {
-        if (index < 0 || index >= this._size) return null;
-        let cur = this.head;
-        let i = 0;
-        while (cur && i < index) {
-            cur = cur.next;
-            i++;
-        }
-        return cur ? cur.data : null;
-    }
-
-    removeAt(index) {
-        if (index < 0 || index >= this._size) return null;
-        if (index === 0) {
-            const removed = this.head;
-            this.head = this.head.next;
-            this._size--;
-            return removed.data;
-        }
-        let prev = null;
-        let cur = this.head;
-        let i = 0;
-        while (cur && i < index) {
-            prev = cur;
-            cur = cur.next;
-            i++;
-        }
-        if (!cur) return null;
-        prev.next = cur.next;
-        this._size--;
-        return cur.data;
-    }
-
-    findByRollNo(rollNo) {
-        let cur = this.head;
-        let index = 0;
-        while (cur) {
-            if (cur.data && cur.data.rollNo === rollNo) return { node: cur, index };
-            cur = cur.next;
-            index++;
-        }
-        return { node: null, index: -1 };
-    }
-
-    findIndex(predicate) {
-        let cur = this.head;
-        let idx = 0;
-        while (cur) {
-            if (predicate(cur.data, idx)) return idx;
-            cur = cur.next;
-            idx++;
-        }
-        return -1;
-    }
-
-    deleteByRollNo(rollNo) {
-        if (!this.head) return false;
-
-        if (this.head.data && this.head.data.rollNo === rollNo) {
-            this.head = this.head.next;
-            this._size--;
-            return true;
-        }
-
-        let prev = null;
-        let current = this.head;
-
-        while (current && (!current.data || current.data.rollNo !== rollNo)) {
-            prev = current;
-            current = current.next;
-        }
-
-        if (!current) {
-            console.warn("Roll number not found");
-            return false;
-        }
-
-        prev.next = current.next;
-        this._size--;
-        return true;
-    }
-
-    clear() {
-        this.head = null;
-        this._size = 0;
-    }
-
-    reverse() {
-        let prev = null;
-        let current = this.head;
-
-        while (current) {
-            const next = current.next;
-            current.next = prev;
-            prev = current;
-            current = next;
-        }
-
-        this.head = prev;
-        return this;
-    }
-
-    toArray() {
-        const out = [];
-        let cur = this.head;
-        while (cur) {
-            out.push(cur.data);
-            cur = cur.next;
-        }
-        return out;
-    }
-
-    forEach(fn) {
-        let cur = this.head;
-        let idx = 0;
-        while (cur) {
-            fn(cur.data, idx);
-            cur = cur.next;
-            idx++;
+function project(centered, components) {
+    // centered: n x m, components: k x m
+    const n = centered.length;
+    const k = components.length;
+    const scores = Array.from({ length: n }, () => new Array(k).fill(0));
+    for (let i = 0; i < n; i++) {
+        for (let j = 0; j < k; j++) {
+            scores[i][j] = dot(centered[i], components[j]);
         }
     }
-
-    map(fn) {
-        const out = [];
-        this.forEach((d, i) => out.push(fn(d, i)));
-        return out;
-    }
-
-    toString() {
-        return this.toArray()
-            .map(s => `Roll No: ${s.rollNo}, Name: ${s.name}, Grade: ${s.grade}`)
-            .join('\n');
-    }
-
-    print() {
-        const arr = this.toArray();
-        if (arr.length === 0) {
-            console.log("List is empty");
-            return;
-        }
-        console.log(`Student List (size=${this.size()}):`);
-        arr.forEach(s => console.log(`Roll No: ${s.rollNo}, Name: ${s.name}, Grade: ${s.grade}`));
-    }
+    return scores;
 }
-        newNode.next = current;
-        this._size++;
-        return true;
+
+/**
+ * pca(data, k, opts)
+ * data: array of n samples, each sample is array of m numbers
+ * k: number of principal components to compute (<= m)
+ * opts: { maxIter, tol }
+ */
+function pca(data, k = null, opts = {}) {
+    if (!Array.isArray(data) || data.length === 0) throw new Error("data must be non-empty array");
+    const n = data.length;
+    const m = data[0].length;
+    k = k == null ? Math.min(n, m) : Math.min(k, m);
+
+    const mean = meanVector(data);
+    const centered = centerData(data, mean);
+    const C = covMatrix(centered);
+
+    const components = [];
+    const eigenvalues = [];
+    const M = C.map(row => row.slice()); // copy for deflation
+
+    for (let i = 0; i < k; i++) {
+        const { eigenvector, eigenvalue } = powerIteration(M, opts);
+        if (eigenvalue <= 0 || norm(eigenvector) === 0) break;
+        // normalize eigenvector to unit length
+        const vnorm = norm(eigenvector);
+        const v = scalarVecMul(eigenvector, 1 / vnorm);
+        components.push(v);
+        eigenvalues.push(eigenvalue);
+        // deflate
+        subtractScaledOuter(M, eigenvalue, v);
     }
 
-    insertEnd(data) {
-        return this.insertAt(this._size, data);
-    }
+    const totalVar = eigenvalues.reduce((s, x) => s + x, 0) || 0;
+    const explainedVariance = eigenvalues.map(ev => ev / (totalVar || 1));
 
-    getAt(index) {
-        if (index < 0 || index >= this._size) return null;
-        let cur = this.head;
-        let i = 0;
-        while (cur && i < index) {
-            cur = cur.next;
-            i++;
-        }
-        return cur ? cur.data : null;
-    }
+    const projected = project(centered, components);
 
-    removeAt(index) {
-        if (index < 0 || index >= this._size) return null;
-        if (index === 0) {
-            const removed = this.head;
-            this.head = this.head.next;
-            this._size--;
-            return removed.data;
-        }
-        let prev = null;
-        let cur = this.head;
-        let i = 0;
-        while (cur && i < index) {
-            prev = cur;
-            cur = cur.next;
-            i++;
-        }
-        if (!cur) return null;
-        prev.next = cur.next;
-        this._size--;
-        return cur.data;
-    }
-
-    findByRollNo(rollNo) {
-        let cur = this.head;
-        let index = 0;
-        while (cur) {
-            if (cur.data && cur.data.rollNo === rollNo) return { node: cur, index };
-            cur = cur.next;
-            index++;
-        }
-        return { node: null, index: -1 };
-    }
-
-    findIndex(predicate) {
-        let cur = this.head;
-        let idx = 0;
-        while (cur) {
-            if (predicate(cur.data, idx)) return idx;
-            cur = cur.next;
-            idx++;
-        }
-        return -1;
-    }
-
-    deleteByRollNo(rollNo) {
-        if (!this.head) return false;
-
-        if (this.head.data && this.head.data.rollNo === rollNo) {
-            this.head = this.head.next;
-            this._size--;
-            return true;
-        }
-
-        let prev = null;
-        let current = this.head;
-
-        while (current && (!current.data || current.data.rollNo !== rollNo)) {
-            prev = current;
-            current = current.next;
-        }
-
-        if (!current) {
-            console.warn("Roll number not found");
-            return false;
-        }
-
-        prev.next = current.next;
-        this._size--;
-        return true;
-    }
-
-    clear() {
-        this.head = null;
-        this._size = 0;
-    }
-
-    reverse() {
-        let prev = null;
-        let current = this.head;
-
-        while (current) {
-            const next = current.next;
-            current.next = prev;
-            prev = current;
-            current = next;
-        }
-
-        this.head = prev;
-        return this;
-    }
-
-    toArray() {
-        const out = [];
-        let cur = this.head;
-        while (cur) {
-            out.push(cur.data);
-            cur = cur.next;
-        }
-        return out;
-    }
-
-    forEach(fn) {
-        let cur = this.head;
-        let idx = 0;
-        while (cur) {
-            fn(cur.data, idx);
-            cur = cur.next;
-            idx++;
-        }
-    }
-
-    map(fn) {
-        const out = [];
-        this.forEach((d, i) => out.push(fn(d, i)));
-        return out;
-    }
-
-    toString() {
-        return this.toArray()
-            .map(s => `Roll No: ${s.rollNo}, Name: ${s.name}, Grade: ${s.grade}`)
-            .join('\n');
-    }
-
-    print() {
-        const arr = this.toArray();
-        if (arr.length === 0) {
-            console.log("List is empty");
-            return;
-        }
-        console.log(`Student List (size=${this.size()}):`);
-        arr.forEach(s => console.log(`Roll No: ${s.rollNo}, Name: ${s.name}, Grade: ${s.grade}`));
-    }
+    return {
+        components,           // array of k vectors (each length m)
+        eigenvalues,          // corresponding eigenvalues
+        explainedVariance,    // fraction of variance explained by each component
+        mean,                 // mean vector used for centering
+        projected             // data projected into k-dim space (n x k)
+    };
 }
+
+module.exports = { pca };
+
+// Example usage (uncomment to run):
+/*
+const X = [
+    [2.5, 2.4],
+    [0.5, 0.7],
+    [2.2, 2.9],
+    [1.9, 2.2],
+    [3.1, 3.0],
+    [2.3, 2.7],
+    [2, 1.6],
+    [1, 1.1],
+    [1.5, 1.6],
+    [1.1, 0.9],
+];
+
+const res = pca(X, 2);
+console.log('Components:', res.components);
+console.log('Eigenvalues:', res.eigenvalues);
+console.log('Explained variance:', res.explainedVariance);
+console.log('Projected (first 3):', res.projected.slice(0,3));
+*/
