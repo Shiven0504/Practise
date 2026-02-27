@@ -23,6 +23,7 @@ def train_adaline(X, d, learning_rate=0.1, max_epochs=1000, tolerance=1e-6, seed
     prev_mse = np.inf
     n_samples = X_bias.shape[0]
     mse_history = []
+    weight_history = []
 
     for epoch in range(1, max_epochs + 1):
         outputs = X_bias.dot(weights)          # shape (n_samples,)
@@ -34,21 +35,22 @@ def train_adaline(X, d, learning_rate=0.1, max_epochs=1000, tolerance=1e-6, seed
 
         mse = np.mean(errors ** 2)
         mse_history.append(mse)
+        weight_history.append(weights.copy())
 
         if verbose and epoch % 100 == 0:
-            print(f"Epoch {epoch:4d} MSE: {mse:.6e}")
+            print(f"Epoch {epoch:4d} MSE: {mse:.6e}  Weights: {weights}")
 
         # Check for convergence (based on MSE change)
         if abs(prev_mse - mse) < tolerance:
             if verbose:
                 print(f"Training converged in {epoch} epoch(s). MSE: {mse:.6e}")
-            return weights, mse_history, epoch
+            return weights, mse_history, epoch, weight_history
 
         prev_mse = mse
 
     if verbose:
         print(f"Max epochs reached ({max_epochs}). Final MSE: {mse:.6e}")
-    return weights, mse_history, max_epochs
+    return weights, mse_history, max_epochs, weight_history
 
 
 def predict_adaline(weights, X):
@@ -74,9 +76,9 @@ if __name__ == "__main__":
     d = np.array([0, 0, 0, 1])
 
     # Train
-    weights, mse_history, epoch_reached = train_adaline(X, d, learning_rate=0.1,
-                                                       max_epochs=1000, tolerance=1e-6,
-                                                       seed=42, verbose=True)
+    weights, mse_history, epoch_reached, weight_history = train_adaline(
+        X, d, learning_rate=0.1, max_epochs=1000, tolerance=1e-6, seed=42, verbose=True
+    )
 
     print("\nFinal weights (including bias):")
     print(weights)
@@ -87,12 +89,25 @@ if __name__ == "__main__":
     for xi, target, lin, p in zip(X, d, linear_outputs, preds):
         print(f"Input: {xi}, Target: {target}, Linear: {lin:.4f}, Predicted: {p}")
 
-    # Optional: plot MSE history
-    plt.figure(figsize=(6,3))
-    plt.plot(mse_history, lw=1.5)
-    plt.xlabel("Epoch")
-    plt.ylabel("MSE")
-    plt.title("ADALINE training MSE")
-    plt.grid(alpha=0.25)
+    # Plot MSE and weight history side by side
+    weight_history_arr = np.array(weight_history)   # shape (epochs, n_weights)
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
+
+    ax1.plot(mse_history, lw=1.5)
+    ax1.set_xlabel("Epoch")
+    ax1.set_ylabel("MSE")
+    ax1.set_title("ADALINE Training MSE")
+    ax1.grid(alpha=0.25)
+
+    labels = ["bias"] + [f"w{i}" for i in range(1, weight_history_arr.shape[1])]
+    for idx, label in enumerate(labels):
+        ax2.plot(weight_history_arr[:, idx], lw=1.5, label=label)
+    ax2.set_xlabel("Epoch")
+    ax2.set_ylabel("Weight value")
+    ax2.set_title("Weight History")
+    ax2.legend()
+    ax2.grid(alpha=0.25)
+
     plt.tight_layout()
     plt.show()
