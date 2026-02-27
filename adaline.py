@@ -2,11 +2,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 """
-ADALINE training for AND function (batch updates).
+ADALINE training for AND, OR, and XOR logic gates (batch updates).
 - Uses vectorized batch weight updates.
 - Stops based on MSE change (tolerance) or max_epochs.
 - Deterministic via fixed random seed.
 - Prints linear outputs and discrete predictions (threshold 0.5).
+- Note: XOR is not linearly separable; ADALINE will not perfectly learn it.
 """
 
 def train_adaline(X, d, learning_rate=0.1, max_epochs=1000, tolerance=1e-6, seed=None, verbose=False):
@@ -62,9 +63,7 @@ def predict_adaline(weights, X):
 
 
 if __name__ == "__main__":
-    np.random.seed(42)
-
-    # Input samples (AND function, 2 inputs)
+    # All 2-input combinations
     X = np.array([
         [0, 0],
         [0, 1],
@@ -72,42 +71,51 @@ if __name__ == "__main__":
         [1, 1]
     ])
 
-    # Desired outputs
-    d = np.array([0, 0, 0, 1])
+    GATES = {
+        "AND": np.array([0, 0, 0, 1]),
+        "OR":  np.array([0, 1, 1, 1]),
+        "XOR": np.array([0, 1, 1, 0]),
+    }
 
-    # Train
-    weights, mse_history, epoch_reached, weight_history = train_adaline(
-        X, d, learning_rate=0.1, max_epochs=1000, tolerance=1e-6, seed=42, verbose=True
-    )
+    fig, axes = plt.subplots(len(GATES), 2, figsize=(12, 4 * len(GATES)))
 
-    print("\nFinal weights (including bias):")
-    print(weights)
+    for row, (gate_name, d) in enumerate(GATES.items()):
+        print(f"\n{'='*50}")
+        print(f"  Training ADALINE on {gate_name} gate")
+        print(f"{'='*50}")
 
-    # Test the trained ADALINE (linear outputs and discrete predictions)
-    linear_outputs, preds = predict_adaline(weights, X)
-    print("\nTesting on inputs:")
-    for xi, target, lin, p in zip(X, d, linear_outputs, preds):
-        print(f"Input: {xi}, Target: {target}, Linear: {lin:.4f}, Predicted: {p}")
+        weights, mse_history, epoch_reached, weight_history = train_adaline(
+            X, d, learning_rate=0.1, max_epochs=1000, tolerance=1e-6, seed=42, verbose=True
+        )
 
-    # Plot MSE and weight history side by side
-    weight_history_arr = np.array(weight_history)   # shape (epochs, n_weights)
+        print(f"\nFinal weights (including bias): {weights}")
+        print(f"Converged / stopped at epoch: {epoch_reached}")
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
+        linear_outputs, preds = predict_adaline(weights, X)
+        print("\nTesting on inputs:")
+        for xi, target, lin, p in zip(X, d, linear_outputs, preds):
+            match = "OK" if p == target else "WRONG"
+            print(f"  Input: {xi}  Target: {target}  Linear: {lin:.4f}  Predicted: {p}  [{match}]")
 
-    ax1.plot(mse_history, lw=1.5)
-    ax1.set_xlabel("Epoch")
-    ax1.set_ylabel("MSE")
-    ax1.set_title("ADALINE Training MSE")
-    ax1.grid(alpha=0.25)
+        # --- MSE plot ---
+        weight_history_arr = np.array(weight_history)
+        ax_mse, ax_w = axes[row]
 
-    labels = ["bias"] + [f"w{i}" for i in range(1, weight_history_arr.shape[1])]
-    for idx, label in enumerate(labels):
-        ax2.plot(weight_history_arr[:, idx], lw=1.5, label=label)
-    ax2.set_xlabel("Epoch")
-    ax2.set_ylabel("Weight value")
-    ax2.set_title("Weight History")
-    ax2.legend()
-    ax2.grid(alpha=0.25)
+        ax_mse.plot(mse_history, lw=1.5)
+        ax_mse.set_xlabel("Epoch")
+        ax_mse.set_ylabel("MSE")
+        ax_mse.set_title(f"{gate_name} — Training MSE")
+        ax_mse.grid(alpha=0.25)
+
+        # --- Weight history plot ---
+        labels = ["bias"] + [f"w{i}" for i in range(1, weight_history_arr.shape[1])]
+        for idx, label in enumerate(labels):
+            ax_w.plot(weight_history_arr[:, idx], lw=1.5, label=label)
+        ax_w.set_xlabel("Epoch")
+        ax_w.set_ylabel("Weight value")
+        ax_w.set_title(f"{gate_name} — Weight History")
+        ax_w.legend()
+        ax_w.grid(alpha=0.25)
 
     plt.tight_layout()
     plt.show()
