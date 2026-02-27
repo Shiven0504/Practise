@@ -19,13 +19,8 @@ const nums = Array.from({ length: 100 }, (_, i) => i + 1);
 // Get every second number (starting from the 2nd element, i.e. indices 1,3,5,...)
 const result = getEverySecond(nums);
 
-const sum = result.reduce((acc, n) => acc + n, 0);
-const average = sum / result.length;
-
 console.log("Every second number from 1..100 (starting at index 1):");
 console.log(result);
-console.log(`Sum: ${sum}`);
-console.log(`Average: ${average}`);
 
 // export for Node.js usage / tests
 if (typeof module !== "undefined" && module.exports) {
