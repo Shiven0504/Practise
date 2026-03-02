@@ -1,174 +1,100 @@
-
-function meanVector(data) {
-    const n = data.length;
-    const m = data[0].length;
-    const mean = new Array(m).fill(0);
-    for (let i = 0; i < n; i++) {
-        for (let j = 0; j < m; j++) mean[j] += data[i][j];
-    }
-    for (let j = 0; j < m; j++) mean[j] /= n;
-    return mean;
-}
-
-function centerData(data, mean) {
-    return data.map(row => row.map((v, j) => v - mean[j]));
-}
-
-function transpose(A) {
-    const m = A.length, n = A[0].length;
-    const T = Array.from({ length: n }, () => new Array(m));
-    for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) T[j][i] = A[i][j];
-    return T;
-}
-
-function matMul(A, B) {
-    const m = A.length, p = B[0].length, n = B.length;
-    const C = Array.from({ length: m }, () => new Array(p).fill(0));
-    for (let i = 0; i < m; i++) {
-        for (let k = 0; k < n; k++) {
-            const aik = A[i][k];
-            for (let j = 0; j < p; j++) C[i][j] += aik * B[k][j];
-        }
-    }
-    return C;
-}
-
-function covMatrix(centered) {
-    const n = centered.length;
-    const Xt = transpose(centered);
-    const C = matMul(Xt, centered);
+function mean(data) {
+    const [n, m] = [data.length, data[0].length];
+    const mu = new Array(m).fill(0);
+    for (const row of data) for (let j = 0; j < m; j++) mu[j] += row[j];
+    return mu.map(v => v / n);
+  }
+  
+  function center(data, mu) {
+    return data.map(row => row.map((v, j) => v - mu[j]));
+  }
+  
+  function covMatrix(X) {
+    const [n, m] = [X.length, X[0].length];
+    const C = Array.from({ length: m }, () => new Array(m).fill(0));
+    for (const row of X)
+      for (let i = 0; i < m; i++)
+        for (let j = i; j < m; j++) C[i][j] += row[i] * row[j];
     const scale = 1 / (n - 1);
-    for (let i = 0; i < C.length; i++) for (let j = 0; j < C.length; j++) C[i][j] *= scale;
+    for (let i = 0; i < m; i++)
+      for (let j = i; j < m; j++) C[j][i] = C[i][j] *= scale;
     return C;
-}
-
-function dot(a, b) {
+  }
+  
+  function dot(a, b) {
     let s = 0;
     for (let i = 0; i < a.length; i++) s += a[i] * b[i];
     return s;
-}
-
-function norm(a) {
-    return Math.sqrt(dot(a, a));
-}
-
-function scalarVecMul(a, s) {
-    return a.map(x => x * s);
-}
-
-function matVecMul(M, v) {
-    const out = new Array(M.length).fill(0);
-    for (let i = 0; i < M.length; i++) {
-        let s = 0;
-        const row = M[i];
-        for (let j = 0; j < row.length; j++) s += row[j] * v[j];
-        out[i] = s;
-    }
-    return out;
-}
-
-function outer(v) {
-    const m = v.length;
-    const M = Array.from({ length: m }, () => new Array(m));
-    for (let i = 0; i < m; i++) for (let j = 0; j < m; j++) M[i][j] = v[i] * v[j];
-    return M;
-}
-
-function subtractScaledOuter(M, scale, v) {
-    // M = M - scale * (v v^T)
-    for (let i = 0; i < M.length; i++) {
-        for (let j = 0; j < M.length; j++) {
-            M[i][j] -= scale * v[i] * v[j];
-        }
-    }
-}
-
-function powerIteration(M, opts = {}) {
-    const maxIter = opts.maxIter || 1000;
-    const tol = opts.tol || 1e-9;
+  }
+  
+  function norm(v) { return Math.sqrt(dot(v, v)); }
+  
+  function matVec(M, v) { return M.map(row => dot(row, v)); }
+  
+  function powerIteration(M, maxIter = 1000, tol = 1e-9) {
     const n = M.length;
-    let b = new Array(n);
-    for (let i = 0; i < n; i++) b[i] = Math.random() - 0.5;
-    let bNorm = norm(b);
-    if (bNorm === 0) b[0] = 1, bNorm = 1;
-    b = scalarVecMul(b, 1 / bNorm);
-
+    let b = Array.from({ length: n }, () => Math.random() - 0.5);
+    let bn = norm(b);
+    if (bn === 0) { b[0] = 1; bn = 1; }
+    b = b.map(x => x / bn);
+  
     let lambda = 0;
-    for (let iter = 0; iter < maxIter; iter++) {
-        const Mb = matVecMul(M, b);
-        const MbNorm = norm(Mb);
-        if (MbNorm === 0) break;
-        const bNext = scalarVecMul(Mb, 1 / MbNorm);
-        const lambdaNext = dot(bNext, matVecMul(M, bNext));
-        if (Math.abs(lambdaNext - lambda) < tol) {
-            b = bNext;
-            lambda = lambdaNext;
-            break;
-        }
-        b = bNext;
-        lambda = lambdaNext;
+    for (let i = 0; i < maxIter; i++) {
+      const Mb = matVec(M, b);
+      const MbN = norm(Mb);
+      if (MbN === 0) break;
+      const next = Mb.map(x => x / MbN);
+      const lNext = dot(next, matVec(M, next));
+      if (Math.abs(lNext - lambda) < tol) return { vec: next, val: lNext };
+      b = next;
+      lambda = lNext;
     }
-    return { eigenvector: b, eigenvalue: lambda };
-}
-
-function project(centered, components) {
-    // centered: n x m, components: k x m
-    const n = centered.length;
-    const k = components.length;
-    const scores = Array.from({ length: n }, () => new Array(k).fill(0));
-    for (let i = 0; i < n; i++) {
-        for (let j = 0; j < k; j++) {
-            scores[i][j] = dot(centered[i], components[j]);
-        }
-    }
-    return scores;
-}
-
-/**
- * pca(data, k, opts)
- * data: array of n samples, each sample is array of m numbers
- * k: number of principal components to compute (<= m)
- * opts: { maxIter, tol }
- */
-function pca(data, k = null, opts = {}) {
-    if (!Array.isArray(data) || data.length === 0) throw new Error("data must be non-empty array");
-    const n = data.length;
-    const m = data[0].length;
-    k = k == null ? Math.min(n, m) : Math.min(k, m);
-
-    const mean = meanVector(data);
-    const centered = centerData(data, mean);
-    const C = covMatrix(centered);
-
-    const components = [];
-    const eigenvalues = [];
-    const M = C.map(row => row.slice()); // copy for deflation
-
+    return { vec: b, val: lambda };
+  }
+  
+  function deflate(M, val, vec) {
+    for (let i = 0; i < M.length; i++)
+      for (let j = 0; j < M.length; j++)
+        M[i][j] -= val * vec[i] * vec[j];
+  }
+  
+  /**
+   * PCA via power iteration with deflation.
+   * @param {number[][]} data - n samples x m features
+   * @param {number} [k] - number of components (default: min(n, m))
+   * @returns {{ components, eigenvalues, explainedVariance, mean, projected }}
+   */
+  function pca(data, k = null) {
+    if (!data?.length) throw new Error("data must be non-empty array");
+    const [n, m] = [data.length, data[0].length];
+    k = Math.min(k ?? Math.min(n, m), m);
+  
+    const mu = mean(data);
+    const X = center(data, mu);
+    const M = covMatrix(X);
+  
+    const components = [], eigenvalues = [];
+  
     for (let i = 0; i < k; i++) {
-        const { eigenvector, eigenvalue } = powerIteration(M, opts);
-        if (eigenvalue <= 0 || norm(eigenvector) === 0) break;
-        // normalize eigenvector to unit length
-        const vnorm = norm(eigenvector);
-        const v = scalarVecMul(eigenvector, 1 / vnorm);
-        components.push(v);
-        eigenvalues.push(eigenvalue);
-        // deflate
-        subtractScaledOuter(M, eigenvalue, v);
+      const { vec, val } = powerIteration(M);
+      if (val <= 0) break;
+      const vn = norm(vec);
+      const v = vec.map(x => x / vn);
+      components.push(v);
+      eigenvalues.push(val);
+      deflate(M, val, v);
     }
-
-    const totalVar = eigenvalues.reduce((s, x) => s + x, 0) || 0;
-    const explainedVariance = eigenvalues.map(ev => ev / (totalVar || 1));
-
-    const projected = project(centered, components);
-
+  
+    const total = eigenvalues.reduce((s, x) => s + x, 0) || 1;
+    const projected = X.map(row => components.map(c => dot(row, c)));
+  
     return {
-        components,           // array of k vectors (each length m)
-        eigenvalues,          // corresponding eigenvalues
-        explainedVariance,    // fraction of variance explained by each component
-        mean,                 // mean vector used for centering
-        projected             // data projected into k-dim space (n x k)
+      components,
+      eigenvalues,
+      explainedVariance: eigenvalues.map(v => v / total),
+      mean: mu,
+      projected,
     };
-}
-
-module.exports = { pca };
-
+  }
+  
+  module.exports = { pca };
