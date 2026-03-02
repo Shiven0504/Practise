@@ -1,78 +1,64 @@
-"""
+"""Fuzzy set operations, relations, and max-min composition."""
 
 import numpy as np
 
-# Fuzzy Set Operations
 
 def fuzzy_union(A, B):
+    """Union of two fuzzy sets: max(A, B)."""
     return np.maximum(A, B)
 
+
 def fuzzy_intersection(A, B):
+    """Intersection of two fuzzy sets: min(A, B)."""
     return np.minimum(A, B)
 
+
 def fuzzy_complement(A):
+    """Complement of a fuzzy set: 1 - A."""
     return 1 - A
 
+
 def fuzzy_difference(A, B):
-    return np.minimum(A, fuzzy_complement(B))
+    """Difference of fuzzy sets: min(A, 1 - B)."""
+    return np.minimum(A, 1 - B)
 
-
-
-# Fuzzy Relation (Cartesian Product)
 
 def fuzzy_relation(A, B):
-    # Cartesian product: min(A(x), B(y)) for each pair (x, y)
-    relation = np.zeros((len(A), len(B)))
-    for i in range(len(A)):
-        for j in range(len(B)):
-            relation[i][j] = min(A[i], B[j])
-    return relation
+    """Cartesian product relation: R[i][j] = min(A[i], B[j])."""
+    return np.minimum(A[:, np.newaxis], B[np.newaxis, :])
 
-
-# Max–Min Composition
 
 def maxmin_composition(R1, R2):
-    # R1: m x n, R2: n x p
-    m, n = R1.shape
-    n2, p = R2.shape
-    if n != n2:
-        raise ValueError("Incompatible relation sizes for composition")
+    """Max-min composition of two fuzzy relations R1 (m×n) and R2 (n×p)."""
+    if R1.shape[1] != R2.shape[0]:
+        raise ValueError(
+            f"Incompatible shapes for composition: {R1.shape} and {R2.shape}"
+        )
+    m, p = R1.shape[0], R2.shape[1]
+    return np.array([
+        [np.max(np.minimum(R1[i, :], R2[:, j])) for j in range(p)]
+        for i in range(m)
+    ])
 
-    R = np.zeros((m, p))
-    for i in range(m):
-        for j in range(p):
-            R[i][j] = np.max(np.minimum(R1[i, :], R2[:, j]))
-    return R
 
+if __name__ == "__main__":
+    A = np.array([0.2, 0.5, 0.7, 1.0])
+    B = np.array([0.3, 0.6, 0.8, 0.4])
 
-# Example Usage
+    print(f"A: {A}")
+    print(f"B: {B}\n")
 
-# Define two fuzzy sets A and B
-A = np.array([0.2, 0.5, 0.7, 1.0])   # fuzzy set A
-B = np.array([0.3, 0.6, 0.8, 0.4])   # fuzzy set B
+    print("--- Fuzzy Set Operations ---")
+    print(f"Union:         {fuzzy_union(A, B)}")
+    print(f"Intersection:  {fuzzy_intersection(A, B)}")
+    print(f"Complement(A): {fuzzy_complement(A)}")
+    print(f"Difference:    {fuzzy_difference(A, B)}\n")
 
-print("Fuzzy Set A:", A)
-print("Fuzzy Set B:", B)
+    print("--- Fuzzy Relations ---")
+    R1 = fuzzy_relation(A, B)
+    R2 = fuzzy_relation(B, A)
+    print(f"R1 (A × B):\n{R1}\n")
+    print(f"R2 (B × A):\n{R2}\n")
 
-# Perform basic fuzzy set operations
-print("\n--- Fuzzy Set Operations ---")
-print("Union:", fuzzy_union(A, B))
-print("Intersection:", fuzzy_intersection(A, B))
-print("Complement of A:", fuzzy_complement(A))
-print("Difference (A - B):", fuzzy_difference(A, B))
-
-# Create fuzzy relation using Cartesian Product
-print("\n--- Fuzzy Relation ---")
-R1 = fuzzy_relation(A, B)
-print("Relation R1 (A x B):\n", R1)
-
-# Another fuzzy relation (B x A for example)
-R2 = fuzzy_relation(B, A)
-print("Relation R2 (B x A):\n", R2)
-
-# Max-Min Composition of R1 and R2
-print("\n--- Max-Min Composition ---")
-R_comp = maxmin_composition(R1, R2)
-print("R1 o R2:\n", R_comp)
-
-"""
+    print("--- Max-Min Composition ---")
+    print(f"R1 ∘ R2:\n{maxmin_composition(R1, R2)}")
