@@ -1,4 +1,3 @@
-# ...existing code...
 import numpy as np
 
 A1 = np.array([-1,  1, -1,  1])
@@ -36,6 +35,11 @@ def recall(pattern, W, activation_fn, max_steps=10):
     return state, max_steps, False
 
 
+def energy(state, W):
+    """Compute Hopfield network energy for a bipolar state."""
+    return -0.5 * float(state @ W @ state)
+
+
 def match_stored(state, stored, names=None):
     """Return name/index of matching stored pattern or (None, -1) if no match."""
     for i, p in enumerate(stored):
@@ -44,32 +48,33 @@ def match_stored(state, stored, names=None):
     return (None, -1)
 
 
-# test patterns
+def flip_bits(pattern, n_bits=1, seed=None):
+    """Return a copy of pattern with n_bits randomly flipped."""
+    rng = np.random.default_rng(seed)
+    out = pattern.copy()
+    idx = rng.choice(pattern.size, size=min(n_bits, pattern.size), replace=False)
+    out[idx] = -out[idx]
+    return out
+
+
+# test patterns (clean + noisy)
 Ax = np.array([-1,  1, -1,  1])
 Ay = np.array([ 1,  1,  1,  1])
 Az = np.array([-1, -1, -1, -1])
-test_patterns = [Ax, Ay, Az]
-test_names = ["Ax", "Ay", "Az"]
+Ax_noisy = flip_bits(Ax, n_bits=1, seed=0)
+test_patterns = [Ax, Ax_noisy, Ay, Az]
+test_names = ["Ax", "Ax_noisy(1bit)", "Ay", "Az"]
 
 if __name__ == "__main__":
     print("\n--- Testing Network Recall (iterative) ---")
     for name, pattern in zip(test_names, test_patterns):
         print(f"\nTesting with pattern: {name}")
-        print("Input:")
-        print(pattern)
+        print(f"  Input:  {pattern}")
+        print(f"  Energy (input): {energy(pattern, W):.2f}")
 
         final, steps, converged = recall(pattern, W, activation, max_steps=20)
+        match_name, _ = match_stored(final, stored_patterns, pattern_names)
 
-        print(f"Output after {steps} step(s):")
-        print(final)
-        if converged:
-            match_name, idx = match_stored(final, stored_patterns, pattern_names)
-            if match_name is not None:
-                print(f"Result: Converged to stored pattern {match_name} (index {idx})")
-            else:
-                print("Result: Converged to a pattern but not one of the stored patterns")
-        else:
-            print("Result: Did not converge within max steps")
-
-
-
+        print(f"  Output: {final}  (after {steps} step(s), converged={converged})")
+        print(f"  Energy (output): {energy(final, W):.2f}")
+        print(f"  Match: {match_name or 'no stored pattern'}")
