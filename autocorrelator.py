@@ -1,115 +1,218 @@
+"""Autocorrelator (Autoassociative) Neural Network Implementation.
+
+Implements an autocorrelator/autoassociative memory network that stores
+and recalls bipolar patterns. Uses outer product learning rule (Hebbian)
+to compute the weight matrix and thresholding for pattern recall.
+
+This is related to Hopfield networks but specifically designed for
+pattern storage and retrieval via autocorrelation.
+
+Typical usage:
+    >>> from autocorrelator import Autocorrelator
+    >>> import numpy as np
+    >>> patterns = np.array([[1, -1, 1, -1], [-1, 1, -1, 1]])
+    >>> net = Autocorrelator(n_neurons=4)
+    >>> net.train(patterns)
+    >>> recalled = net.recall(np.array([1, -1, 1, 1]))  # noisy input
+"""
+
+from __future__ import annotations
+
 import numpy as np
-from typing import Tuple, List, Optional
-
-A1 = np.array([-1,  1, -1,  1])
-A2 = np.array([ 1,  1,  1, -1])
-A3 = np.array([-1, -1, -1,  1])
-stored_patterns = [A1, A2, A3]
-pattern_names = ["A1", "A2", "A3"]
+import numpy.typing as npt
 
 
-def build_weight_matrix(patterns: List[np.ndarray]) -> np.ndarray:
-    """Builds a Hopfield-style weight matrix from bipolar patterns (zero diagonal)."""
-    n = patterns[0].size
-    W = np.zeros((n, n), dtype=float)
-    for p in patterns:
-        W += np.outer(p, p)
-    np.fill_diagonal(W, 0)
-    return W
+class Autocorrelator:
+    """Autoassociative memory network using Hebbian learning.
 
+    Stores bipolar patterns ({-1, +1}) and recalls the closest
+    stored pattern given a (possibly corrupted) input.
 
-def activation(x: np.ndarray) -> np.ndarray:
-    """Bipolar step activation function."""
-    return np.where(x >= 0, 1, -1)
-
-
-def energy(state: np.ndarray, W: np.ndarray) -> float:
-    """Compute Hopfield network energy for a bipolar state."""
-    return -0.5 * float(state @ W @ state)
-
-
-def recall(pattern: np.ndarray,
-           W: np.ndarray,
-           activation_fn=activation,
-           max_steps: int = 10,
-           mode: str = "synchronous",
-           rng: Optional[np.random.Generator] = None) -> Tuple[np.ndarray, int, bool]:
+    Attributes:
+        n_neurons: Number of neurons in the network.
+        weights: Weight matrix of shape (n_neurons, n_neurons).
+        n_patterns: Number of stored patterns.
     """
-    Recall a pattern. mode: 'synchronous' (default) or 'asynchronous'.
-    Returns (final_state, steps_taken, converged_bool).
-    """
-    if rng is None:
-        rng = np.random.default_rng()
 
-    state = pattern.copy()
-    n = state.size
+    def __init__(self, n_neurons: int) -> None:
+        """Initialize the autocorrelator network.
 
-    if mode == "synchronous":
-        for step in range(1, max_steps + 1):
-            new_state = activation_fn(np.dot(state, W))
-            if np.array_equal(new_state, state):
-                return new_state, step, True
-            state = new_state
-        return state, max_steps, False
+        Args:
+            n_neurons: Number of neurons (must match pattern length).
 
-    elif mode == "asynchronous":
-        for step in range(1, max_steps + 1):
-            prev = state.copy()
-            # random order asynchronous updates (one full pass = one step)
-            for i in rng.permutation(n):
-                net = W[i, :] @ state
-                state[i] = activation_fn(np.array([net]))[0]
-            if np.array_equal(state, prev):
-                return state, step, True
-        return state, max_steps, False
+        Raises:
+            ValueError: If n_neurons < 1.
+        """
+        if n_neurons < 1:
+            raise ValueError(f"n_neurons must be >= 1, got {n_neurons}")
 
-    else:
-        raise ValueError("mode must be 'synchronous' or 'asynchronous'")
+        self.n_neurons = n_neurons
+        self.weights: npt.NDArray[np.float64] = np.zeros(
+            (n_neurons, n_neurons), dtype=np.float64
+        )
+        self.n_patterns: int = 0
+
+    def train(self, patterns: npt.NDArray[np.float64]) -> None:
+        """Store patterns using the outer product (Hebbian) rule.
+
+        Computes: W = (1/P) * Σ(p_i * p_i^T) with zero diagonal.
+
+        Args:
+            patterns: Matrix of bipolar patterns, shape (n_patterns, n_neurons).
+                Each element should be +1 or -1.
+
+        Raises:
+            ValueError: If pattern dimension doesn't match n_neurons.
+        """
+        if patterns.ndim == 1:
+            patterns = patterns.reshape(1, -1)
+
+        if patterns.shape[1] != self.n_neurons:
+            raise ValueError(
+                f"Pattern length {patterns.shape[1]} != n_neurons {self.n_neurons}"
+            )
+
+        self.n_patterns = patterns.shape[0]
+
+        # Outer product rule
+        self.weights = np.zeros((self.n_neurons, self.n_neurons), dtype=np.float64)
+        for p in patterns:
+            self.weights += np.outer(p, p)
+
+        # Normalize and zero diagonal (no self-connections)
+        self.weights /= self.n_patterns
+        np.fill_diagonal(self.weights, 0)
+
+    def recall(
+        self,
+        pattern: npt.NDArray[np.float64],
+        max_iterations: int = 100,
+        mode: str = "synchronous",
+    ) -> npt.NDArray[np.int_]:
+        """Recall stored pattern from a (possibly noisy) input.
+
+        Args:
+            pattern: Input pattern of shape (n_neurons,), bipolar values.
+            max_iterations: Maximum update iterations before giving up.
+            mode: Update mode — 'synchronous' (all at once) or
+                'asynchronous' (one neuron at a time, random order).
+
+        Returns:
+            Recalled bipolar pattern of shape (n_neurons,).
+
+        Raises:
+            ValueError: If pattern length doesn't match n_neurons.
+            ValueError: If mode is not 'synchronous' or 'asynchronous'.
+        """
+        if len(pattern) != self.n_neurons:
+            raise ValueError(
+                f"Pattern length {len(pattern)} != n_neurons {self.n_neurons}"
+            )
+        if mode not in ("synchronous", "asynchronous"):
+            raise ValueError(f"mode must be 'synchronous' or 'asynchronous', got '{mode}'")
+
+        state = np.array(pattern, dtype=np.float64).copy()
+
+        for _ in range(max_iterations):
+            prev_state = state.copy()
+
+            if mode == "synchronous":
+                net_input = self.weights @ state
+                state = np.where(net_input >= 0, 1, -1).astype(np.float64)
+            else:
+                # Asynchronous: update neurons in random order
+                order = np.random.permutation(self.n_neurons)
+                for i in order:
+                    net_input_i = self.weights[i] @ state
+                    state[i] = 1.0 if net_input_i >= 0 else -1.0
+
+            # Check convergence
+            if np.array_equal(state, prev_state):
+                break
+
+        return state.astype(np.int_)
+
+    def energy(self, state: npt.NDArray[np.float64]) -> float:
+        """Compute the energy of a network state.
+
+        E = -0.5 * s^T * W * s
+
+        Lower energy indicates a more stable state (closer to stored pattern).
+
+        Args:
+            state: Network state of shape (n_neurons,).
+
+        Returns:
+            Energy value (scalar). Stored patterns are energy minima.
+        """
+        return float(-0.5 * state @ self.weights @ state)
+
+    def capacity(self) -> float:
+        """Estimate the theoretical storage capacity.
+
+        For a Hopfield-like network, the reliable capacity is
+        approximately 0.138 * n_neurons patterns.
+
+        Returns:
+            Estimated maximum number of reliably storable patterns.
+        """
+        return 0.138 * self.n_neurons
+
+    def test_recall(
+        self, patterns: npt.NDArray[np.float64], noise_level: float = 0.1
+    ) -> float:
+        """Test recall accuracy with noisy inputs.
+
+        Args:
+            patterns: Original stored patterns, shape (n_patterns, n_neurons).
+            noise_level: Fraction of bits to flip (0.0 = no noise, 1.0 = all flipped).
+
+        Returns:
+            Recall accuracy as fraction of perfectly recalled patterns.
+        """
+        if patterns.ndim == 1:
+            patterns = patterns.reshape(1, -1)
+
+        correct = 0
+        n_flip = max(1, int(self.n_neurons * noise_level))
+
+        for p in patterns:
+            noisy = p.copy()
+            flip_idx = np.random.choice(self.n_neurons, size=n_flip, replace=False)
+            noisy[flip_idx] *= -1
+
+            recalled = self.recall(noisy)
+            if np.array_equal(recalled, p.astype(np.int_)):
+                correct += 1
+
+        return correct / len(patterns)
 
 
-def match_stored(state: np.ndarray, stored: List[np.ndarray], names: Optional[List[str]] = None) -> Tuple[Optional[str], int]:
-    """Return (name, index) of matching stored pattern or (None, -1)."""
-    for i, p in enumerate(stored):
-        if np.array_equal(state, p):
-            return (names[i] if names else i, i)
-    return (None, -1)
-
-
-def flip_bits(pattern: np.ndarray, n_bits: int = 1, seed: Optional[int] = None) -> np.ndarray:
-    """Return a copy of pattern with n_bits randomly flipped (bipolar)."""
-    rng = np.random.default_rng(seed)
-    out = pattern.copy()
-    idx = rng.choice(pattern.size, size=min(n_bits, pattern.size), replace=False)
-    out[idx] = -out[idx]
-    return out
-
-
-# build weight matrix when module run (not on import)
 if __name__ == "__main__":
-    W = build_weight_matrix(stored_patterns)
+    np.random.seed(42)
 
-    print("Weight Matrix (W):")
-    print(W)
+    # Store 3 bipolar patterns of length 8
+    patterns = np.array(
+        [
+            [1, 1, -1, -1, 1, 1, -1, -1],
+            [-1, -1, 1, 1, -1, -1, 1, 1],
+            [1, -1, 1, -1, 1, -1, 1, -1],
+        ],
+        dtype=np.float64,
+    )
 
-    # test inputs (including a noisy version)
-    Ax = np.array([-1,  1, -1,  1])
-    Ay = np.array([ 1,  1,  1,  1])
-    Az = np.array([-1, -1, -1, -1])
-    Ax_noisy = flip_bits(Ax, n_bits=1, seed=0)
+    net = Autocorrelator(n_neurons=8)
+    net.train(patterns)
 
-    test_patterns = [Ax, Ax_noisy, Ay, Az]
-    test_names = ["Ax", "Ax_noisy(1bit)", "Ay", "Az"]
+    print(f"Stored {net.n_patterns} patterns")
+    print(f"Theoretical capacity: {net.capacity():.1f} patterns\n")
 
-    rng = np.random.default_rng(0)
+    # Test recall with noise
+    for i, p in enumerate(patterns):
+        noisy = p.copy()
+        noisy[0] *= -1  # flip one bit
+        recalled = net.recall(noisy)
+        match = "✓" if np.array_equal(recalled, p.astype(np.int_)) else "✗"
+        print(f"Pattern {i}: {p.astype(int)} → noisy: {noisy.astype(int)} → recalled: {recalled} {match}")
 
-    print("\n--- Testing Network Recall ---")
-    for name, pattern in zip(test_names, test_patterns):
-        print(f"\nTesting with pattern: {name}")
-        print("Input:", pattern)
-        print("Energy (input):", energy(pattern, W))
-
-        for mode in ("synchronous", "asynchronous"):
-            final, steps, converged = recall(pattern, W, max_steps=20, mode=mode, rng=rng)
-            match_name, idx = match_stored(final, stored_patterns, pattern_names)
-            print(f"  [{mode:11s}] Output after {steps} step(s): {final}  Converged: {converged}  Match: {match_name}")
-            print(f"              Energy (output): {energy(final, W)}")
+    print(f"\nRecall accuracy (10% noise): {net.test_recall(patterns, 0.1):.0%}")
