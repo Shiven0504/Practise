@@ -31,22 +31,16 @@ def fuzzy_relation(A, B):
 def maxmin_composition(R1, R2):
     """Max-min composition of two fuzzy relations R1 (m×n) and R2 (n×p)."""
     if R1.shape[1] != R2.shape[0]:
-        raise ValueError(
-            f"Incompatible shapes for composition: {R1.shape} and {R2.shape}"
-        )
-    m, p = R1.shape[0], R2.shape[1]
-    return np.array([
-        [np.max(np.minimum(R1[i, :], R2[:, j])) for j in range(p)]
-        for i in range(m)
-    ])
+        raise ValueError(f"Incompatible shapes: {R1.shape} and {R2.shape}")
+    # R1[:, :, None] broadcasts over p; R2[None, :, :] broadcasts over m
+    return np.max(np.minimum(R1[:, :, None], R2[None, :, :]), axis=1)
 
 
 if __name__ == "__main__":
     A = np.array([0.2, 0.5, 0.7, 1.0])
     B = np.array([0.3, 0.6, 0.8, 0.4])
 
-    print(f"A: {A}")
-    print(f"B: {B}\n")
+    print(f"A: {A}\nB: {B}\n")
 
     print("--- Fuzzy Set Operations ---")
     print(f"Union:         {fuzzy_union(A, B)}")
@@ -54,9 +48,9 @@ if __name__ == "__main__":
     print(f"Complement(A): {fuzzy_complement(A)}")
     print(f"Difference:    {fuzzy_difference(A, B)}\n")
 
-    print("--- Fuzzy Relations ---")
     R1 = fuzzy_relation(A, B)
     R2 = fuzzy_relation(B, A)
+    print("--- Fuzzy Relations ---")
     print(f"R1 (A × B):\n{R1}\n")
     print(f"R2 (B × A):\n{R2}\n")
 
