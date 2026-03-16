@@ -1,130 +1,88 @@
 """
+Archived: PCA + LDA on Iris dataset using sklearn.
+
 import numpy as np
-import pandas as pd
 from sklearn.datasets import load_iris
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 import matplotlib.pyplot as plt
 
-# Load Dataset
 data = load_iris()
-X = data.data
-y = data.target
-target_names = data.target_names
+X, y, names = data.data, data.target, data.target_names
+X = StandardScaler().fit_transform(X)
 
-# Standardize the data
-scaler = StandardScaler()
-X_scaled = scaler.fit_transform(X)
-
-# -------------------------
-# 1️⃣ Principal Component Analysis (PCA)
-# -------------------------
-pca = PCA(n_components=2)  # Reduce to 2 dimensions
-X_pca = pca.fit_transform(X_scaled)
-
-plt.figure(figsize=(7,5))
-for i, target in enumerate(np.unique(y)):
-    plt.scatter(X_pca[y == target, 0], X_pca[y == target, 1], label=target_names[i])
-plt.title("PCA - 2D Projection")
-plt.xlabel("PC1")
-plt.ylabel("PC2")
-plt.legend()
-plt.show()
-
-print("Explained Variance Ratio (PCA):", pca.explained_variance_ratio_)
-
-# -------------------------
-# 2️⃣ Linear Discriminant Analysis (LDA)
-# -------------------------
-lda = LDA(n_components=2)
-X_lda = lda.fit_transform(X_scaled, y)
-
-plt.figure(figsize=(7,5))
-for i, target in enumerate(np.unique(y)):
-    plt.scatter(X_lda[y == target, 0], X_lda[y == target, 1], label=target_names[i])
-plt.title("LDA - 2D Projection")
-plt.xlabel("LD1")
-plt.ylabel("LD2")
-plt.legend()
-plt.show()
+for model, title, labels in [
+    (PCA(n_components=2),  "PCA", ("PC1", "PC2")),
+    (LDA(n_components=2),  "LDA", ("LD1", "LD2")),
+]:
+    X2 = model.fit_transform(X) if title == "PCA" else model.fit_transform(X, y)
+    plt.figure(figsize=(7, 5))
+    for i in np.unique(y):
+        plt.scatter(X2[y==i, 0], X2[y==i, 1], label=names[i])
+    plt.title(f"{title} - 2D Projection")
+    plt.xlabel(labels[0]); plt.ylabel(labels[1])
+    plt.legend(); plt.show()
+    if title == "PCA":
+        print("Explained Variance Ratio (PCA):", model.explained_variance_ratio_)
 """
 
 import pandas as pd
 import numpy as np
-from math import log2
 
 
-def entropy(target_col):
-    """Calculate Shannon entropy of a target column."""
-    _, counts = np.unique(target_col, return_counts=True)
-    probs = counts / counts.sum()
-    return -np.sum(probs * np.log2(probs))
+def majority(col):
+    vals, counts = np.unique(col, return_counts=True)
+    return vals[np.argmax(counts)]
 
 
-def info_gain(data, split_attribute, target_name="Play"):
-    """Calculate information gain for a given attribute split."""
-    total_entropy = entropy(data[target_name])
-    values, counts = np.unique(data[split_attribute], return_counts=True)
-    total = counts.sum()
+def entropy(col):
+    _, counts = np.unique(col, return_counts=True)
+    p = counts / counts.sum()
+    return -np.sum(p * np.log2(p))
 
-    weighted_entropy = sum(
-        (counts[i] / total) * entropy(data[data[split_attribute] == values[i]][target_name])
-        for i in range(len(values))
+
+def info_gain(data, feature, target="Play"):
+    total = entropy(data[target])
+    values, counts = np.unique(data[feature], return_counts=True)
+    weighted = sum(
+        (counts[i] / counts.sum()) * entropy(data[data[feature] == v][target])
+        for i, v in enumerate(values)
     )
+    return total - weighted
 
-    return total_entropy - weighted_entropy
 
+def id3(data, original_data, features, target="Play", parent_class=None):
+    unique = np.unique(data[target])
 
-def id3(data, original_data, features, target_name="Play", parent_node_class=None):
-    """Build a decision tree using the ID3 algorithm (recursive)."""
-    unique_targets = np.unique(data[target_name])
-
-    # Pure node — all samples have the same class
-    if len(unique_targets) == 1:
-        return unique_targets[0]
-
-    # No samples left — return majority class from original data
+    if len(unique) == 1:
+        return unique[0]
     if len(data) == 0:
-        vals, counts = np.unique(original_data[target_name], return_counts=True)
-        return vals[np.argmax(counts)]
-
-    # No features left — return current majority class
+        return majority(original_data[target])
     if len(features) == 0:
-        return parent_node_class
+        return parent_class
 
-    # Determine majority class of current subset
-    vals, counts = np.unique(data[target_name], return_counts=True)
-    parent_node_class = vals[np.argmax(counts)]
+    current_majority = majority(data[target])
+    best = features[np.argmax([info_gain(data, f, target) for f in features])]
+    remaining = [f for f in features if f != best]
 
-    # Select feature with highest information gain
-    gains = [info_gain(data, f, target_name) for f in features]
-    best_feature = features[np.argmax(gains)]
-
-    tree = {best_feature: {}}
-    remaining_features = [f for f in features if f != best_feature]
-
-    for value in np.unique(data[best_feature]):
-        subset = data[data[best_feature] == value]
-        tree[best_feature][value] = id3(
-            subset, original_data, remaining_features, target_name, parent_node_class
-        )
-
-    return tree
+    return {best: {
+        v: id3(data[data[best] == v], original_data, remaining, target, current_majority)
+        for v in np.unique(data[best])
+    }}
 
 
-# Sample dataset (classic weather/play-tennis problem)
 data = {
-    "Outlook":     ["Sunny", "Sunny", "Overcast", "Rain", "Rain", "Rain", "Overcast",
-                    "Sunny", "Sunny", "Rain", "Sunny", "Overcast", "Overcast", "Rain"],
-    "Temperature": ["Hot", "Hot", "Hot", "Mild", "Cool", "Cool", "Cool",
-                    "Mild", "Cool", "Mild", "Mild", "Mild", "Hot", "Mild"],
-    "Humidity":    ["High", "High", "High", "High", "Normal", "Normal", "Normal",
-                    "High", "Normal", "Normal", "Normal", "High", "Normal", "High"],
-    "Wind":        ["Weak", "Strong", "Weak", "Weak", "Weak", "Strong", "Strong",
-                    "Weak", "Weak", "Weak", "Strong", "Strong", "Weak", "Strong"],
-    "Play":        ["No", "No", "Yes", "Yes", "Yes", "No", "Yes",
-                    "No", "Yes", "Yes", "Yes", "Yes", "Yes", "No"],
+    "Outlook":     ["Sunny","Sunny","Overcast","Rain","Rain","Rain","Overcast",
+                    "Sunny","Sunny","Rain","Sunny","Overcast","Overcast","Rain"],
+    "Temperature": ["Hot","Hot","Hot","Mild","Cool","Cool","Cool",
+                    "Mild","Cool","Mild","Mild","Mild","Hot","Mild"],
+    "Humidity":    ["High","High","High","High","Normal","Normal","Normal",
+                    "High","Normal","Normal","Normal","High","Normal","High"],
+    "Wind":        ["Weak","Strong","Weak","Weak","Weak","Strong","Strong",
+                    "Weak","Weak","Weak","Strong","Strong","Weak","Strong"],
+    "Play":        ["No","No","Yes","Yes","Yes","No","Yes",
+                    "No","Yes","Yes","Yes","Yes","Yes","No"],
 }
 
 df = pd.DataFrame(data)
@@ -133,4 +91,3 @@ features = ["Outlook", "Temperature", "Humidity", "Wind"]
 tree = id3(df, df, features)
 print("Decision Tree (ID3):")
 print(tree)
-
