@@ -46,7 +46,8 @@ if __name__ == "__main__":
     print(f"Union:         {fuzzy_union(A, B)}")
     print(f"Intersection:  {fuzzy_intersection(A, B)}")
     print(f"Complement(A): {fuzzy_complement(A)}")
-    print(f"Difference:    {fuzzy_difference(A, B)}\n")
+    print(f"Difference:    {fuzzy_difference(A, B)}")
+    print(f"Alpha-cut(A, 0.5): {fuzzy_alpha_cut(A, 0.5)}\n")
 
     R1 = fuzzy_relation(A, B)
     R2 = fuzzy_relation(B, A)
