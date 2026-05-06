@@ -28,6 +28,11 @@ def fuzzy_relation(A, B):
     return np.minimum(A[:, np.newaxis], B[np.newaxis, :])
 
 
+def fuzzy_alpha_cut(A, alpha):
+    """Alpha-cut of a fuzzy set: elements >= alpha."""
+    return np.where(A >= alpha, 1, 0)
+
+
 def maxmin_composition(R1, R2):
     """Max-min composition of two fuzzy relations R1 (m×n) and R2 (n×p)."""
     if R1.shape[1] != R2.shape[0]:
@@ -52,7 +57,8 @@ if __name__ == "__main__":
     print(f"Union:         {fuzzy_union(A, B)}")
     print(f"Intersection:  {fuzzy_intersection(A, B)}")
     print(f"Complement(A): {fuzzy_complement(A)}")
-    print(f"Difference:    {fuzzy_difference(A, B)}\n")
+    print(f"Difference:    {fuzzy_difference(A, B)}")
+    print(f"Alpha-cut(A, 0.5): {fuzzy_alpha_cut(A, 0.5)}\n")
 
     print("--- Fuzzy Relations ---")
     R1 = fuzzy_relation(A, B)
