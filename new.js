@@ -59,13 +59,38 @@ function mean(data) {
   }
   
   /**
+   * Validates input data for PCA.
+   * @param {any} data - Input data to validate
+   * @throws {Error} If data is invalid
+   */
+  function validateData(data) {
+    if (!Array.isArray(data) || data.length === 0) {
+      throw new Error("data must be a non-empty array");
+    }
+    const m = data[0].length;
+    if (!Array.isArray(data[0]) || m === 0) {
+      throw new Error("data must contain arrays with at least one feature");
+    }
+    for (let i = 1; i < data.length; i++) {
+      if (!Array.isArray(data[i]) || data[i].length !== m) {
+        throw new Error("all rows must have the same number of features");
+      }
+      for (let j = 0; j < m; j++) {
+        if (typeof data[i][j] !== 'number' || isNaN(data[i][j])) {
+          throw new Error("all values must be valid numbers");
+        }
+      }
+    }
+  }
+  
+  /**
    * PCA via power iteration with deflation.
    * @param {number[][]} data - n samples x m features
    * @param {number} [k] - number of components (default: min(n, m))
    * @returns {{ components, eigenvalues, explainedVariance, mean, projected }}
    */
   function pca(data, k = null) {
-    if (!data?.length) throw new Error("data must be non-empty array");
+    validateData(data);
     const [n, m] = [data.length, data[0].length];
     k = Math.min(k ?? Math.min(n, m), m);
   
