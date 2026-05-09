@@ -127,6 +127,17 @@ def fuzzy_temperature_demo(
         save_plot: If True, save the figure to *out_path* before displaying.
         out_path: File path used when *save_plot* is True.
     """
+    if sample_temps is None:
+        sample_temps = np.array([0, 5, 10, 15, 20, 25, 30, 35, 40])
+    else:
+        sample_temps = np.asarray(sample_temps)
+        if sample_temps.ndim != 1:
+            raise ValueError("sample_temps must be 1-dimensional")
+        if len(sample_temps) == 0:
+            raise ValueError("sample_temps cannot be empty")
+        if not np.all(np.isfinite(sample_temps)):
+            raise ValueError("all temperatures must be finite numbers")
+    
     def _trimf(x: np.ndarray, abc: list[float]) -> np.ndarray:
         """Triangular membership function — local fallback for skfuzzy.trimf.
 
@@ -163,31 +174,20 @@ def fuzzy_temperature_demo(
         """
         return float(np.interp(value, x, mf))
 
-    try:
-        import skfuzzy as fuzz  # type: ignore
-        trimf = fuzz.trimf
-        interp_membership = fuzz.interp_membership
-    except Exception:
-        trimf = _trimf
-        interp_membership = _interp_membership
+    x_temp = np.arange(0, 41, dtype=float)
+    cold = _trimf(x_temp, [0, 0, 20])
+    warm = _trimf(x_temp, [10, 20, 30])
+    hot = _trimf(x_temp, [20, 40, 40])
 
-    x_temp = np.arange(0, 41, 1)
-    cold = trimf(x_temp, [0, 0, 20])
-    warm = trimf(x_temp, [10, 20, 30])
-    hot  = trimf(x_temp, [20, 40, 40])
+    cold_m = [_interp_membership(x_temp, cold, t) for t in sample_temps]
+    warm_m = [_interp_membership(x_temp, warm, t) for t in sample_temps]
+    hot_m = [_interp_membership(x_temp, hot, t) for t in sample_temps]
 
-    if sample_temps is None:
-        sample_temps = np.array([0, 5, 10, 15, 20, 25, 30, 35, 40])
-
-    cold_m = np.array([interp_membership(x_temp, cold, t) for t in sample_temps])
-    warm_m = np.array([interp_membership(x_temp, warm, t) for t in sample_temps])
-    hot_m  = np.array([interp_membership(x_temp, hot, t)  for t in sample_temps])
-
-    print("\n--- Fuzzy Logic Example (Temperature) ---")
-    print("Temp |  cold  |  warm  |   hot ")
-    print("--------------------------------")
+    print("\n--- Fuzzy Temperature ---")
+    print("Temp | cold  | warm  | hot")
+    print("-----------------------------")
     for t, c, w, h in zip(sample_temps, cold_m, warm_m, hot_m):
-        print(f"{t:4d} | {c:6.3f} | {w:6.3f} | {h:6.3f}")
+        print(f"{t:4.1f} | {c:.3f} | {w:.3f} | {h:.3f}")
 
     if plot:
         plt.figure(figsize=(7, 3.5))
@@ -209,15 +209,35 @@ def fuzzy_temperature_demo(
         plt.show()
 
 
-def run_nn_and_fuzzy() -> None:
-    """Train an MLP on the AND gate and run the fuzzy temperature demo.
-
-    Fits a two-neuron MLP (lbfgs solver) on all four AND-gate input
-    combinations, prints predictions vs. expected outputs and accuracy,
-    then calls :func:`fuzzy_temperature_demo`.
+def mlp_and_gate(X=None, y=None):
     """
-    X: np.ndarray = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
-    y: np.ndarray = np.array([0, 0, 0, 1])
+    Train MLP classifier on AND gate logic.
+    
+    Args:
+        X (array-like, optional): Input features. If None, uses default AND gate inputs.
+        y (array-like, optional): Target labels. If None, uses default AND gate outputs.
+    """
+    if X is None:
+        X = np.array([[0,0],[0,1],[1,0],[1,1]])
+    else:
+        X = np.asarray(X)
+        if X.ndim != 2:
+            raise ValueError("X must be 2-dimensional")
+        if X.shape[1] != 2:
+            raise ValueError("X must have 2 features (binary inputs)")
+        if not np.all(np.isin(X, [0, 1])):
+            raise ValueError("X must contain only 0s and 1s")
+    
+    if y is None:
+        y = np.array([0, 0, 0, 1])
+    else:
+        y = np.asarray(y)
+        if y.ndim != 1:
+            raise ValueError("y must be 1-dimensional")
+        if len(y) != len(X):
+            raise ValueError("y must have same length as X")
+        if not np.all(np.isin(y, [0, 1])):
+            raise ValueError("y must contain only 0s and 1s")
 
     nn = MLPClassifier(
         hidden_layer_sizes=(2,),
