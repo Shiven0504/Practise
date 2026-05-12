@@ -29,20 +29,51 @@ for model, title, labels in [
 
 import pandas as pd
 import numpy as np
+from typing import Any, Dict, List, Optional, Union
+from numpy.typing import NDArray
 
 
-def majority(col):
+def majority(col: Union[pd.Series, NDArray]) -> Any:
+    """
+    Find the most frequent value in a column.
+    
+    Args:
+        col: Series or array of values
+    
+    Returns:
+        The most frequently occurring value
+    """
     vals, counts = np.unique(col, return_counts=True)
     return vals[np.argmax(counts)]
 
 
-def entropy(col):
+def entropy(col: Union[pd.Series, NDArray]) -> float:
+    """
+    Calculate Shannon entropy of a column.
+    
+    Args:
+        col: Series or array of class labels
+    
+    Returns:
+        Entropy value (float)
+    """
     _, counts = np.unique(col, return_counts=True)
     p = counts / counts.sum()
     return -np.sum(p * np.log2(p))
 
 
-def info_gain(data, feature, target="Play"):
+def info_gain(data: pd.DataFrame, feature: str, target: str = "Play") -> float:
+    """
+    Calculate information gain for a feature in ID3 decision tree.
+    
+    Args:
+        data: DataFrame containing the dataset
+        feature: Column name of the feature to evaluate
+        target: Column name of the target variable (default: "Play")
+    
+    Returns:
+        Information gain value (float) - higher means more discriminative
+    """
     total = entropy(data[target])
     values, counts = np.unique(data[feature], return_counts=True)
     weighted = sum(
@@ -52,7 +83,27 @@ def info_gain(data, feature, target="Play"):
     return total - weighted
 
 
-def id3(data, original_data, features, target="Play", parent_class=None):
+def id3(
+    data: pd.DataFrame,
+    original_data: pd.DataFrame,
+    features: List[str],
+    target: str = "Play",
+    parent_class: Optional[Any] = None
+) -> Union[Any, Dict]:
+    """
+    Build a decision tree using the ID3 (Iterative Dichotomiser 3) algorithm.
+    
+    Args:
+        data: Current dataset (subset of original during recursion)
+        original_data: Full original dataset for majority voting fallback
+        features: List of available feature column names
+        target: Column name of the target variable (default: "Play")
+        parent_class: Most common class value from parent node (for leaf fallback)
+    
+    Returns:
+        If leaf: the class label (Any)
+        If branch: dictionary mapping feature values to subtrees (Dict)
+    """
     unique = np.unique(data[target])
 
     if len(unique) == 1:
