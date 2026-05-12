@@ -1,8 +1,21 @@
 /**
- * Return every second element from `arr`.
- * @param {Array} arr - input array (commonly 100 integers)
- * @param {number} [start=1] - parity to start from: 0 => indices 0,2,4...; 1 => indices 1,3,5...
- * @returns {Array} selected elements
+ * Extract every second element from an array based on parity.
+ * 
+ * Filters array elements by index parity. Returns elements at even indices
+ * when start=0, or odd indices when start=1.
+ * 
+ * @param {number[]} arr - Input array of numbers (or any array type)
+ * @param {number} [start=1] - Index parity selector
+ *                              - 0: select elements at indices 0, 2, 4, ...
+ *                              - 1: select elements at indices 1, 3, 5, ...
+ * @returns {number[]} Array of selected elements maintaining original values
+ * @throws {TypeError} If arr is not an array or start is not 0 or 1
+ * 
+ * @example
+ * const nums = [1, 2, 3, 4, 5, 6];
+ * getEverySecond(nums, 0); // [1, 3, 5]
+ * getEverySecond(nums, 1); // [2, 4, 6]
+ * getEverySecond(nums);    // [2, 4, 6] (default start=1)
  */
 function getEverySecond(arr, start = 1) {
     if (!Array.isArray(arr)) throw new TypeError("arr must be an array");
@@ -21,6 +34,13 @@ const result = getEverySecond(nums);
 
 console.log("Every second number from 1..100 (starting at index 1):");
 console.log(result);
+
+// Calculate and display statistics
+const sum = result.reduce((acc, val) => acc + val, 0);
+const average = sum / result.length;
+
+console.log(`Sum: ${sum}`);
+console.log(`Average: ${average}`);
 
 // export for Node.js usage / tests
 if (typeof module !== "undefined" && module.exports) {
