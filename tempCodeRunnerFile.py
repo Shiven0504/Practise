@@ -44,6 +44,16 @@ def match_stored(state, stored, names=None):
     return (None, -1)
 
 
+def flip_bits(pattern, num_flips, seed=None):
+    """Return a noisy version of the pattern with num_flips bipolar bit flips."""
+    rng = np.random.default_rng(seed)
+    noisy = pattern.copy()
+    if num_flips > 0:
+        indices = rng.choice(len(pattern), size=num_flips, replace=False)
+        noisy[indices] *= -1
+    return noisy
+
+
 # test patterns
 Ax = np.array([-1,  1, -1,  1])
 Ay = np.array([ 1,  1,  1,  1])
@@ -70,6 +80,22 @@ if __name__ == "__main__":
                 print("Result: Converged to a pattern but not one of the stored patterns")
         else:
             print("Result: Did not converge within max steps")
+
+    print("\n--- Noisy recall demo for stored patterns ---")
+    for name, pattern in zip(pattern_names, stored_patterns):
+        for flips in (0, 1, 2):
+            noisy_pattern = flip_bits(pattern, flips, seed=42)
+            print(f"\n{name} with {flips} flip(s):")
+            print(noisy_pattern)
+
+            final, steps, converged = recall(noisy_pattern, W, activation, max_steps=20)
+            print(f"Output after {steps} step(s):")
+            print(final)
+            match_name, idx = match_stored(final, stored_patterns, pattern_names)
+            if match_name is not None:
+                print(f"Result: Converged to stored pattern {match_name} (index {idx})")
+            else:
+                print("Result: Did not recall a stored pattern")
 
 
 
