@@ -1,4 +1,9 @@
-# ...existing code...
+"""Hopfield associative memory recall demo.
+
+Builds a weight matrix from bipolar stored patterns and
+runs synchronous recall tests for both exact and noisy inputs.
+"""
+
 import numpy as np
 
 A1 = np.array([-1,  1, -1,  1])
@@ -18,7 +23,10 @@ print(W)
 
 
 def activation(x):
-    """Bipolar step activation function."""
+    """Return bipolar activation values from input potentials.
+
+    Values greater than or equal to zero map to +1, otherwise -1.
+    """
     return np.where(x >= 0, 1, -1)
 
 
@@ -37,7 +45,10 @@ def recall(pattern, W, activation_fn, max_steps=10):
 
 
 def match_stored(state, stored, names=None):
-    """Return name/index of matching stored pattern or (None, -1) if no match."""
+    """Return the stored pattern name/index that matches the recalled state.
+
+    If the pattern is not found, returns (None, -1).
+    """
     for i, p in enumerate(stored):
         if np.array_equal(state, p):
             return (names[i] if names else i, i)
