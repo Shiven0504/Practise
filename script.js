@@ -4,11 +4,11 @@
  * Filters array elements by index parity. Returns elements at even indices
  * when start=0, or odd indices when start=1.
  * 
- * @param {number[]} arr - Input array of numbers (or any array type)
+ * @param {any[]} arr - Input array (numbers or any element type)
  * @param {number} [start=1] - Index parity selector
  *                              - 0: select elements at indices 0, 2, 4, ...
  *                              - 1: select elements at indices 1, 3, 5, ...
- * @returns {number[]} Array of selected elements maintaining original values
+ * @returns {any[]} Selected elements with original values preserved
  * @throws {TypeError} If arr is not an array or start is not 0 or 1
  * 
  * @example
