@@ -142,3 +142,20 @@ features = ["Outlook", "Temperature", "Humidity", "Wind"]
 tree = id3(df, df, features)
 print("Decision Tree (ID3):")
 print(tree)
+
+
+if __name__ == "__main__":
+    try:
+        from sklearn.preprocessing import StandardScaler
+        from sklearn.decomposition import PCA
+
+        iris_df = pd.read_csv("iris.csv")
+        X = iris_df.iloc[:, :-1].values
+        scaler = StandardScaler()
+        Xs = scaler.fit_transform(X)
+        pca = PCA(n_components=2)
+        X2 = pca.fit_transform(Xs)
+        print("PCA explained variance ratio:", pca.explained_variance_ratio_)
+        print("First 5 PCA projections:\n", X2[:5])
+    except Exception as e:
+        print("PCA demo failed:", e)
