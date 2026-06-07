@@ -127,6 +127,8 @@ def fuzzy_temperature_demo(
         save_plot: If True, save the figure to *out_path* before displaying.
         out_path: File path used when *save_plot* is True.
     """
+    # Edited: small tweak to enable branch-based PR (no logic change)
+    # This comment is intentional and safe — used to demonstrate change on a feature branch.
     if sample_temps is None:
         sample_temps = np.array([0, 5, 10, 15, 20, 25, 30, 35, 40])
     else:
