@@ -74,6 +74,7 @@ def info_gain(data: pd.DataFrame, feature: str, target: str = "Play") -> float:
     Returns:
         Information gain value (float) - higher means more discriminative
     """
+    # Edited: small non-functional comment to create a feature branch for PR
     total = entropy(data[target])
     values, counts = np.unique(data[feature], return_counts=True)
     weighted = sum(
