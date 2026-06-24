@@ -31,16 +31,20 @@ const nums = Array.from({ length: 100 }, (_, i) => i + 1);
 
 // Get every second number (starting from the 2nd element, i.e. indices 1,3,5,...)
 const result = getEverySecond(nums);
+// New helper: return selected items plus simple statistics (non-breaking)
+function getEverySecondWithStats(arr, start = 1) {
+    const items = getEverySecond(arr, start);
+    const sum = items.reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0);
+    const average = items.length ? sum / items.length : 0;
+    return { items, sum, average };
+}
 
+// Example usage: array of integers from 1..100
+const stats = getEverySecondWithStats(nums);
 console.log("Every second number from 1..100 (starting at index 1):");
-console.log(result);
-
-// Calculate and display statistics
-const sum = result.reduce((acc, val) => acc + val, 0);
-const average = sum / result.length;
-
-console.log(`Sum: ${sum}`);
-console.log(`Average: ${average}`);
+console.log(stats.items);
+console.log(`Sum: ${stats.sum}`);
+console.log(`Average: ${stats.average}`);
 
 // export for Node.js usage / tests
 if (typeof module !== "undefined" && module.exports) {
