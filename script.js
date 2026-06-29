@@ -46,7 +46,8 @@ console.log(stats.items);
 console.log(`Sum: ${stats.sum}`);
 console.log(`Average: ${stats.average}`);
 
+// Modified: export stats helper so it can be used/tested elsewhere
 // export for Node.js usage / tests
 if (typeof module !== "undefined" && module.exports) {
-    module.exports = { getEverySecond };
+    module.exports = { getEverySecond, getEverySecondWithStats };
 }
